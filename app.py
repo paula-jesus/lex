@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from utils import EstilizarPagina, GerarTabela, gerar_tabela_sheets, create_area_plot, filter_by_multiselect, create_gauge_chart
+from utils import EstilizarPagina, GerarTabela, gerar_tabela_sheets, create_area_plot, filter_by_multiselect
 from estilizador import DataframeStyler, PageStyler
 import plotly.graph_objects as go
 import plotly.express as px
