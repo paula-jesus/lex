@@ -41,8 +41,8 @@ class DataReader:
         os.environ["LOOKERSDK_API_VERSION"] = "4.0"
         os.environ["LOOKERSDK_VERIFY_SSL"] = "true"
         os.environ["LOOKERSDK_TIMEOUT"] = "600"
-        os.environ["LOOKERSDK_CLIENT_ID"] = "Z3Jn9M2PMWwhZspG8tHm"
-        os.environ["LOOKERSDK_CLIENT_SECRET"] = "GFwWT4QHK8CrSDZnNTY2S7r4"
+        os.environ["LOOKERSDK_CLIENT_ID"] =  st.secrets["LOOKER_CLIENT_ID"]
+        os.environ["LOOKERSDK_CLIENT_SECRET"] = st.secrets["LOOKER_CLIENT_SECRET"]
         file_path = os.path.join(self.file_dir, folder, file_name)
         with open(file_path, 'r') as sql_file:
             sql_query = sql_file.read()
