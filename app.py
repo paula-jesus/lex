@@ -24,8 +24,6 @@ loading_message.progress(0, text=text)
 
 dados_looker['month'] = pd.to_datetime(dados_looker['month'])
 dados_looker['month'] = dados_looker['month'].dt.strftime('%Y-%m')
-# mask = dados_looker['month'] >= '2023-12'
-# dados_looker = dados_looker[mask]
 
 for column in ['Auditoria', 'Autoavaliação','Programa 5S']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
