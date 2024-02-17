@@ -16,10 +16,14 @@ last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 
 tabela = GerarTabela()
 dados_looker = tabela.gerar_dados_lex()
-dados_planilha = gerar_tabela_sheets()
+dados_planilha = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','fonte_oficial')
+dados_metas = gerar_tabela_sheets('1htP_m0eMy7pMxvB4EJIMIPfspzHZv66pH5cpLxjprMU','metas')
 
 mask = dados_looker['type_dc'] == 'Crossdocking'
 dados_looker = dados_looker[mask]
+
+mask = dados_metas['type_dc'] == 'Crossdocking'
+dados_metas = dados_metas[mask]
 
 dados_planilha = dados_planilha.drop('#', axis=1)
 
@@ -30,7 +34,7 @@ dados_looker['month'] = dados_looker['month'].dt.strftime('%Y-%m')
 mask = dados_looker['month'] >= '2023-12'
 dados_looker = dados_looker[mask]
 
-for column in ['Auditoria', 'Autoavaliação','Programa 5S']:
+for column in ['Auditoria', 'Auto avaliação','Programa 5S']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
 
 dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='left')
@@ -41,91 +45,40 @@ dados_compilados = filter_by_multiselect(dados_compilados, "month", "Mês")
 
 dados_compilados = filter_by_multiselect(dados_compilados, "routing_code", "Routing Code")
 
-dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate', 'sla':'SLA','autoavaliacao':'Autoavaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
+dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate', 'sla':'SLA','Auto avaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
 
 dados_lex_gauge = dados_compilados[dados_compilados['Mês'] == last_month.strftime('%Y-%m')]
 
 dados_tabela_pivtada = dados_compilados.copy()
 
+# st.write(dados_tabela_pivtada)
+
 dados_tabela_pivtada.rename(columns={'Mês': 'KPIs'}, inplace=True)
 
 pivot_table = dados_tabela_pivtada.pivot_table(columns='KPIs', aggfunc='median')
-
-# Define a function that returns the goal based on the column name
-def get_goal(row):
-    if row.name == 'OPAV':
-        return 0.36
-    elif row.name == 'Programa 5S':
-        return 8
-    elif row.name == 'SLA':
-        return 0.97
-    elif row.name == 'Produtividade Média':
-        return 1100
-    elif row.name == 'Loss Rate':
-        return 0.20
-    elif row.name == 'Auditoria':
-        return 1
-    elif row.name == 'Autoavaliação':
-        return 1
-    elif row.name == 'Ocorrências de +2HE':
-        return 0
-    elif row.name == 'Ocorrências de -11Hs Interjornadas':
-        return 0
-    elif row.name == 'Absenteísmo': 
-        return 0.03   
-    elif row.name == 'Backlog':
-        return 0.1        
-    else:
-        return None 
     
-def peso(row):
-    if row.name == 'OPAV':
-        return 3
-    elif row.name == 'Programa 5S':
-        return 3
-    elif row.name == 'SLA':
-        return 3
-    elif row.name == 'Produtividade Média':
-        return 3
-    elif row.name == 'Loss Rate':
-        return 3
-    elif row.name == 'Auditoria':
-        return 65
-    elif row.name == 'Autoavaliação':
-        return 1
-    elif row.name == 'Ocorrências de +2HE':
-        return 3
-    elif row.name == 'Ocorrências de -11Hs Interjornadas':
-        return 1
-    elif row.name == 'Absenteísmo': 
-        return 1   
-    elif row.name == 'Backlog':
-        return 3        
-    else:
-        return None  
-    
-pivot_table['Meta'] = pivot_table.apply(get_goal, axis=1)
+pivot_table = pivot_table.reset_index()
 
-cols = list(pivot_table.columns)
+dados_mergeados_meta = pd.merge(pivot_table, dados_metas, left_on='index', right_on='KPI', how='right')
 
-cols.remove('Meta')
+dados_mergeados_meta.set_index('KPI', inplace=True)
 
-cols.insert(0, 'Meta')
+dados_mergeados_meta.index.name = None
 
-pivot_table_reset = pivot_table[cols]
+tabela_com_pesos = dados_mergeados_meta.copy()
 
-pivot_table_reset = pivot_table_reset.fillna('')
+dados_mergeados_meta = dados_mergeados_meta.drop(['type_dc', 'peso', 'pilar', 'index'], axis=1)
 
-tabela_com_pesos = pivot_table_reset.copy()
+pivot_table_reset = dados_mergeados_meta.fillna('')
 
 pivot_table_reset.rename(columns={'Mês': 'KPIs'}, inplace=True)
 
-pivot_table_reset.loc[['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Backlog','Auditoria','Autoavaliação']] *= 100
+pivot_table_reset.loc[['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação']] *= 100
 
 def format_row_with_percent(row):
     return row.apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) else x)
 
-row_labels = ['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Backlog','Auditoria','Autoavaliação']  
+row_labels = ['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row_with_percent, axis=1)
 
 def format_row(row):
@@ -134,24 +87,24 @@ def format_row(row):
 row_labels = ['Programa 5S','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Produtividade Média']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row, axis=1)
 
-def color_based_on_row(row): 
-    meta = row['Meta'] 
-    row_name = row.name 
-    if row_name in ('Absenteísmo','OPAV','Loss Rate','Auditoria','Backlog','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas'): 
-        return ['color: red' if val > meta else 'color: black' for val in row] 
-    else: 
-        return ['color: red' if val < meta else 'color: black' for val in row]
+# def color_based_on_row(row): 
+#     meta = row['Meta'] 
+#     row_name = row.name 
+#     if row_name in ('Absenteísmo','OPAV','Loss Rate','Auditoria','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas'): 
+#         return ['color: red' if val > meta else 'color: black' for val in row] 
+#     else: 
+#         return ['color: red' if val < meta else 'color: black' for val in row]
 
-styled_df = pivot_table_reset.style.apply(color_based_on_row, axis=1)
+# styled_df = pivot_table_reset.style.apply(color_based_on_row, axis=1)
 
-rendered_table = styled_df.to_html()
+rendered_table = pivot_table_reset.to_html()
 centered_table = f"""
 <div style="display: flex; justify-content: center;">
 <div style="max-height: 500px; overflow-y: auto;">
         {rendered_table}
 """
 
-on = st.toggle('Visualizar atingimento sem considerar peso')
+on = st.toggle('Visualizar detalhamento dos resultados (sem considerar peso)')
 
 if on:
 
@@ -163,16 +116,24 @@ if on:
 
 else:
 
-    tabela_com_pesos['Peso'] = tabela_com_pesos.apply(peso, axis=1)
-
     def atingimento_com_peso(row):
         meta = row['Meta']
-        peso = row['Peso']
+        peso = row['peso']
         row_name = row.name
         if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Backlog','Loss Rate','OPAV'):
             return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
         else:
             return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+        
+    tabela_com_pesos['Meta'] = pd.to_numeric(tabela_com_pesos['Meta'], errors='coerce')
+
+    agrupado_por_pilar = tabela_com_pesos.groupby('pilar').sum()
+
+    st.write(agrupado_por_pilar)
+
+    tabela_com_pesos = tabela_com_pesos.drop(['type_dc', 'pilar', 'index'], axis=1)
+
+    tabela_com_pesos.dropna(subset=['Meta'], inplace=True)
 
     tabela_com_pesos_styled = tabela_com_pesos.apply(atingimento_com_peso, axis=1)
 
@@ -182,7 +143,7 @@ else:
 
     tabela_com_pesos_styled.loc['Atingimento Total'] = totals
 
-    tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'Peso'], axis=1)
+    tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'peso'], axis=1)
 
     tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%'.format(x))
 
@@ -634,20 +595,20 @@ with tab5:
         ),
         layout={'width': 500, 'height': 320}
     )
-
+ 
     col2.plotly_chart(fig)
 
     col1, col2 = st.columns([1.1, 1])
 
-    value = dados_compilados['Autoavaliação'].median()
+    value = dados_compilados['Auto avaliação'].median()
 
-    dados_lex_resampled = dados_compilados.resample('M')['Autoavaliação'].median().reset_index()
+    dados_lex_resampled = dados_compilados.resample('M')['Auto avaliação'].median().reset_index()
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Autoavaliação", 'Autoavaliação', "Meta: 1", 1, 1))
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Auto avaliação", 'Auto avaliação', "Meta: 1", 1, 1))
 
-    value = dados_lex_gauge['Autoavaliação'].median()
+    value = dados_lex_gauge['Auto avaliação'].median()
 
     fig = go.Figure(
 
@@ -656,7 +617,7 @@ with tab5:
                 mode="gauge+number+delta",
                 value=value,
                 domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "Autoavaliação", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
+                title={'text': "Auto avaliação", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
                 delta={'reference': 1, 'increasing': {'color': "RebeccaPurple"}, 'decreasing': {'color': "black"}},
                 number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
                 gauge={
