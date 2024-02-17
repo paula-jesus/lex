@@ -16,7 +16,7 @@ last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 
 tabela = GerarTabela()
 dados_looker = tabela.gerar_dados_lex()
-dados_planilha = gerar_tabela_sheets()
+dados_planilha = gerar_tabela_sheets('fonte_oficial')
 
 mask = dados_looker['type_dc'] == 'Agência'
 dados_looker = dados_looker[mask]
@@ -30,7 +30,7 @@ dados_looker['month'] = dados_looker['month'].dt.strftime('%Y-%m')
 mask = dados_looker['month'] >= '2023-12'
 dados_looker = dados_looker[mask]
 
-for column in ['Auditoria', 'Autoavaliação','Programa 5S']:
+for column in ['Auditoria', 'Auto avaliação','Programa 5S']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
 
 dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='left')
@@ -41,7 +41,7 @@ dados_compilados = filter_by_multiselect(dados_compilados, "month", "Mês")
 
 dados_compilados = filter_by_multiselect(dados_compilados, "routing_code", "Routing Code")
 
-dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate', 'sla':'SLA','autoavaliacao':'Autoavaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
+dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate', 'sla':'SLA','autoavaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
 
 dados_lex_gauge = dados_compilados[dados_compilados['Mês'] == last_month.strftime('%Y-%m')]
 
