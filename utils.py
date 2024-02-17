@@ -70,7 +70,7 @@ class GerarTabela:
 
 
 st.cache_data(show_spinner=False, ttl=840000)
-def gerar_tabela_sheets():
+def gerar_tabela_sheets(key, worksheet):
     google_sheets_api_credentials = {
     "type": "service_account",
     "project_id": "ba-automatizacoes",
@@ -86,10 +86,10 @@ def gerar_tabela_sheets():
     } 
 
     gc = gspread.service_account_from_dict(google_sheets_api_credentials)
-    sh = gc.open_by_key('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s')
+    sh = gc.open_by_key(key)
     worksheet_list = sh.worksheets()
 
-    ws = sh.worksheet('fonte_oficial')
+    ws = sh.worksheet(worksheet)
     data = ws.get_values(value_render_option="UNFORMATTED_VALUE", date_time_render_option="FORMATTED_STRING")
 
     df = pd.DataFrame(data[1:], columns=data[0])
