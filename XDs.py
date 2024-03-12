@@ -19,13 +19,20 @@ dados_looker = tabela.gerar_dados_lex()
 dados_planilha = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','fonte_oficial')
 dados_metas = gerar_tabela_sheets('1htP_m0eMy7pMxvB4EJIMIPfspzHZv66pH5cpLxjprMU','metas')
 
+dados_metas_planilha = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','fonte_metas')
+
 mask = dados_looker['type_dc'] == 'Crossdocking'
 dados_looker = dados_looker[mask]
 
 mask = dados_metas['type_dc'] == 'Crossdocking'
 dados_metas = dados_metas[mask]
 
+mask = dados_metas_planilha['BASE'] == 'XD'
+dados_metas_planilha = dados_metas_planilha[mask]
+
 dados_planilha = dados_planilha.drop('#', axis=1)
+
+dados_metas_planilha = dados_metas_planilha.drop('#', axis=1)
 
 loading_message.progress(0, text=text)
 
@@ -37,27 +44,79 @@ dados_looker = dados_looker[mask]
 for column in ['Auditoria', 'Auto avaliação','Programa 5S']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
 
+for column in ['Auditoria', 'Auto avaliação','Programa 5S (%)', 'OPAV', 'Produtividade', 'Loss Rate ($)', 'Absenteísmo (%)']:
+    dados_metas_planilha[column] = pd.to_numeric(dados_metas_planilha[column], errors='coerce')
+
+dados_looker['month'] = pd.to_datetime(dados_looker['month']).dt.to_period('M')
+dados_planilha['month'] = pd.to_datetime(dados_planilha['month']).dt.to_period('M')
+
+dados_metas_planilha['month'] = pd.to_datetime(dados_metas_planilha['month']).dt.to_period('M')
+########lembrar de calcular o resultado com variacao por mes########
+
+dados_planilha['routing_code'] = dados_planilha['routing_code'].replace('XDCJ2', 'CJ2')
+dados_metas_planilha['routing_code'] = dados_metas_planilha['routing_code'].replace('XDCJ2', 'CJ2')
+
+dados_planilha = dados_planilha.replace('N/A', '')
+
+dados_metas_planilha = dados_metas_planilha.replace('N/A', '')
+
 dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='left')
+
+dados_compilados['month'] = dados_compilados['month'].dt.to_timestamp().dt.strftime('%Y-%m')
 
 #Filtros
 
-dados_compilados = filter_by_multiselect(dados_compilados, "month", "Mês")
+dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "month", "Mês")
 
-dados_compilados = filter_by_multiselect(dados_compilados, "routing_code", "Routing Code")
+dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "routing_code", "Routing Code")
 
-dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate', 'sla':'SLA','Auto avaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
+dados_compilados = dados_compilados.drop(['sla'], axis=1, errors='ignore')
+
+dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate','Auto avaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
 
 dados_lex_gauge = dados_compilados[dados_compilados['Mês'] == last_month.strftime('%Y-%m')]
 
 dados_tabela_pivtada = dados_compilados.copy()
-
-# st.write(dados_tabela_pivtada)
 
 dados_tabela_pivtada.rename(columns={'Mês': 'KPIs'}, inplace=True)
 
 pivot_table = dados_tabela_pivtada.pivot_table(columns='KPIs', aggfunc='median')
     
 pivot_table = pivot_table.reset_index()
+
+last_month = pd.to_datetime('now').to_period('M') - 1
+dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['month'] == last_month]
+
+metas_pivot = dados_metas_planilha.pivot_table(columns='month', aggfunc='median')
+
+metas_pivot = metas_pivot.reset_index()
+
+st.write(metas_pivot)
+
+st.write(pivot_table)
+
+# Join metas_pivot and pivot_table on the index
+combined_df = pd.merge(pivot_table, metas_pivot, left_on='index', right_on='index', how='left')
+
+# combined_df = pivot_table.merge(metas_pivot, left_index=True, right_index=True)
+
+# Get the column name for the last month
+last_month_column = metas_pivot.columns[-1]
+
+# Rename the column with the values of the current month to 'Meta'
+combined_df = combined_df.rename(columns={last_month_column: 'Meta'})
+
+# Move 'Meta' column to the last position
+columns = combined_df.columns.tolist()
+columns.remove('Meta')
+columns.append('Meta')
+combined_df = combined_df[columns]
+
+st.write(combined_df)
+
+
+
+
 
 dados_mergeados_meta = pd.merge(pivot_table, dados_metas, left_on='index', right_on='KPI', how='right')
 
@@ -73,12 +132,12 @@ pivot_table_reset = dados_mergeados_meta.fillna('')
 
 pivot_table_reset.rename(columns={'Mês': 'KPIs'}, inplace=True)
 
-pivot_table_reset.loc[['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação']] *= 100
+pivot_table_reset.loc[['OPAV', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação', 'Inventario', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base (%)'	]] *= 100
 
 def format_row_with_percent(row):
     return row.apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) else x)
 
-row_labels = ['OPAV', 'SLA', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação']  
+row_labels = ['OPAV', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação', 'Inventario', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base (%)']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row_with_percent, axis=1)
 
 def format_row(row):
@@ -120,16 +179,17 @@ else:
         meta = row['Meta']
         peso = row['peso']
         row_name = row.name
-        if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Backlog','Loss Rate','OPAV'):
+        if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo/ Pacote','Loss Rate','OPAV'):
             return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
         else:
-            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            # return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
         
     tabela_com_pesos['Meta'] = pd.to_numeric(tabela_com_pesos['Meta'], errors='coerce')
 
     agrupado_por_pilar = tabela_com_pesos.groupby('pilar').sum()
 
-    st.write(agrupado_por_pilar)
+    # st.write(agrupado_por_pilar)
 
     tabela_com_pesos = tabela_com_pesos.drop(['type_dc', 'pilar', 'index'], axis=1)
 
@@ -145,7 +205,7 @@ else:
 
     tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'peso'], axis=1)
 
-    tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%'.format(x))
+    tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.1f}%')
 
     rendered_table = tabela_com_pesos_styled.to_html()
     centered_table = f"""
@@ -167,6 +227,63 @@ dados_compilados.set_index('Mês', inplace=True)
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Pessoas","Qualidade","Entrega", "Financeiro", "Auditoria"])
 
 with tab1:
+
+    col1, col2 = st.columns([1.1, 1])
+
+    dados_compilados['Aderência ao Plano de Capacitação da Qualidade definido para a Base'] = pd.to_numeric(dados_compilados['Aderência ao Plano de Capacitação da Qualidade definido para a Base'], errors='coerce')
+    dados_lex_gauge['Aderência ao Plano de Capacitação da Qualidade definido para a Base'] = pd.to_numeric(dados_lex_gauge['Aderência ao Plano de Capacitação da Qualidade definido para a Base'], errors='coerce')
+    
+    value = dados_compilados['Aderência ao Plano de Capacitação da Qualidade definido para a Base'].median()
+    
+    dados_lex_resampled = dados_compilados.resample('M')['Aderência ao Plano de Capacitação da Qualidade definido para a Base'].median().reset_index()
+
+    dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Aderência ao Plano de Capacitação da Qualidade definido para a Base", 'Aderência ao Plano de Capacitação da Qualidade', "Meta: 90%", 0.03, 0.03))
+
+    value = dados_lex_gauge['Aderência ao Plano de Capacitação da Qualidade definido para a Base'].median()
+
+    fig = go.Figure(
+
+        go.Indicator(
+
+            mode="gauge+number+delta",
+            value=value,
+            domain={'x': [0, 1], 'y': [0, 1]},
+            title={'text': "Aderência ao Plano de Capacitação da Qualidade", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
+            delta={'reference': 0.03, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
+            number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
+            gauge={
+                'axis': {'range': [0, 0.1]},
+                'bar': {'color': '#8fe1ff'},
+                'steps': [
+                    {'range': [0, 0.03], 'color': '#c9f1ac'},  
+                    {'range': [0.03, 0.1], 'color': '#fab8a3'},  
+                ],
+                'threshold': {
+                    'line': {'color': "black", 'width': 4},
+                    'thickness': 0.75,
+                    'value': value
+                }
+            }
+        ),
+        layout={
+            'annotations': [
+                {
+                    'x': 0.5,
+                    'y': -0.25,
+                    'showarrow': False,
+                    'text': "Valor referente ao último mês completo",
+                    'xref': "paper",
+                    'yref': "paper"
+                }
+            ],
+            'width': 500, 
+            'height': 320
+        }
+    )
+
+    col2.plotly_chart(fig)
 
     col1, col2 = st.columns([1.1, 1])
 
@@ -441,63 +558,6 @@ with tab2:
 
 
 with tab3:
-
-    col1, col2 = st.columns([1.1, 1])
-
-    value = dados_compilados['SLA'].median()
-
-    dados_lex_resampled = dados_compilados.resample('M')['SLA'].median().reset_index()
-
-    dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
-
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "SLA", 'SLA', "Meta: 97%", 0.97, 0.97))
-
-    value = dados_lex_gauge['SLA'].median() 
-
-    fig = go.Figure(
-
-        go.Indicator(
-
-            mode="gauge+number+delta",
-            value=value,
-            domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "SLA", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 0.97, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
-            number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
-            gauge={
-                'axis': {'range': [0, 1]},
-                'bar': {'color': '#8fe1ff'},
-                'steps': [
-                    {'range': [0, 0.97], 'color': '#fab8a3'},
-                    {'range': [0.97, 1], 'color': '#c9f1ac'}, 
-                ],
-                'threshold': {
-                    'line': {'color': "black", 'width': 4},
-                    'thickness': 0.75,
-                    'value': value
-                }
-            }
-        ),
-        layout={
-            'annotations': [
-                {
-                    'x': 0.5,
-                    'y': -0.25,
-                    'showarrow': False,
-                    'text': "Valor referente ao último mês completo",
-                    'xref': "paper",
-                    'yref': "paper"
-                }
-            ],
-
-            'width': 500,
-            'height': 320
-        }
-    )
-
-    col2.plotly_chart(fig)
-
-    col1, col2 = st.columns([1.1, 1])
 
     value = dados_compilados['Produtividade Média'].median()  
 
