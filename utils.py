@@ -114,7 +114,7 @@ def create_area_plot(df, y_column, title, text, y0, y1):
         ),
     )
 
-    # Add an annotation
+    #Add an annotation
     plot.add_annotation(
         x=df["Mês"].max(),
         y=y0,
@@ -130,15 +130,16 @@ def create_area_plot(df, y_column, title, text, y0, y1):
         borderpad=4,
     )
 
-    plot.update_layout(shapes=[goal_line])
+    plot.update_layout(shapes=[goal_line], showlegend=False, yaxis_title=None)
 
     return plot
 
-def filter_by_multiselect(df, column, label):
-    selected_values = st.sidebar.multiselect(label, df[column].unique(), key=label)
+def filter_by_multiselect(df1, df2, column, label):
+    selected_values = st.sidebar.multiselect(label, df1[column].unique(), key=label)
     if selected_values:
-        df = df[df[column].isin(selected_values)]
-    return df
+        df1 = df1[df1[column].isin(selected_values)]
+        df2 = df2[df2[column].isin(selected_values)]
+    return df1, df2
 
 def create_gauge_chart(df, column, title, green1, green2, red1, red2, x=1, y=0):
     value = df[column].median()
