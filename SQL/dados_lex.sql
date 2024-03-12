@@ -11,8 +11,6 @@ WITH opav1 AS(
       GROUP BY
           (DATE_TRUNC('month', "base_xdapp_damaged"."created")),
           1
-      ORDER BY
-          3 DESC
       )
       ,
       opav AS(
@@ -41,8 +39,6 @@ WITH opav1 AS(
           (DATE_TRUNC('month', CONVERT_TIMEZONE('America/Sao_Paulo', package_process_deadline.started_at_time) )),
           1,
           3
-      ORDER BY
-          3 DESC
       )
       , lossrate AS(
       SELECT
@@ -76,7 +72,7 @@ WITH opav1 AS(
       , daily_people AS (
         SELECT
           DATE("created_timezone_loggi") AS created_date,
-          COUNT(DISTINCT "op_id") AS pessoas,
+          COUNT(DISTINCT CASE WHEN base_employees.job_name IS NULL OR  base_employees.job_name   LIKE (CAST('%' AS VARCHAR) || CAST(REPLACE(REPLACE('Auxiliar', '%', '\\%'), '_', '\\_') AS VARCHAR) || CAST('%' AS VARCHAR)) THEN base_process.op_id  ELSE NULL END) AS pessoas,
           COUNT(DISTINCT "package_id") AS pacotes,
           base_dist_center.routing_code AS routing_code,
           (TO_CHAR(DATE_TRUNC('month', "created_timezone_loggi"), 'YYYY-MM')) AS month,
@@ -85,8 +81,10 @@ WITH opav1 AS(
         FROM
           dbt_dw.base_process base_process
         LEFT JOIN dbt_dw.base_distribution_center AS base_dist_center ON base_process.dc_name = base_dist_center.name
+        LEFT JOIN people_data.people_individual  AS base_employees ON base_employees.email = base_process.op_email
         WHERE created_date >= 2023-08
         AND base_process.type_dc IN ('Crossdocking','Agência')
+        AND base_process.process IN ('PRE', 'Separação')
         GROUP BY
           DATE("created_timezone_loggi"),
           4,
@@ -104,44 +102,6 @@ WITH opav1 AS(
       FROM daily_people
       GROUP BY 1, 2, 3, 4
       )
-      , backlog AS (
-      SELECT
-          (TO_CHAR(DATE_TRUNC('month', last_enriched_sorting_record.created_raw), 'YYYY-MM')) AS month,
-          last_enriched_sorting_record.routing_code  AS routing_code,
-          ( COUNT(DISTINCT (CASE
-                                WHEN (lsd_package.current_internal_status NOT IN (2, 9, 14, 15, 20, 96, 104, 118, 122) -- Entregue, Retornado para o cliente, Mercadoria avariada, Pacote extraviado, Roubo / Furto, Retido no posto fiscal, Retirar nos Correios, Confiscado no posto fiscal
-            AND NOT (POSITION('SALVADOS' IN last_enriched_sorting_record.destination_unit_load) > 0)
-            AND NOT (POSITION('DESCARTE' IN last_enriched_sorting_record.destination_unit_load) > 0)
-            AND (last_enriched_sorting_record.package_id IS NOT NULL OR (DATE(lsd_package.last_package_check_updated )) IS NOT NULL)
-            AND NOT COALESCE((lsd_package.last_resolution_bypassed = False AND (DATE(lsd_package.last_resolution_resolved_at)) IS NULL), FALSE)
-            AND
-              CASE
-                WHEN COALESCE(current_package_direction.current_direction, 'Entrega') = 'Entrega'
-                THEN (
-                  NVL(package_deadline.promiseddate, DATEADD(day, 9, (DATE(package_deadline.first_evidence )))) < CONVERT_TIMEZONE('America/Sao_Paulo',GETDATE())
-                )
-                WHEN current_package_direction.current_direction = 'Devolução'
-                THEN CONVERT_TIMEZONE('America/Sao_Paulo', current_package_direction.created) < DATEADD(day,-20, DATE_TRUNC('day', CONVERT_TIMEZONE('America/Sao_Paulo', GETDATE())))
-              END
-      ) IS TRUE THEN lsd_package.n1pk_package_id
-                              END))  )*1.0/NULLIF(( COUNT(DISTINCT (CASE
-                              WHEN lsd_package.current_internal_status NOT IN (2, 9, 14, 15, 20, 104, 118, 122)
-                                    AND (last_enriched_sorting_record.package_id IS NOT NULL OR (DATE(lsd_package.last_package_check_updated )) IS NOT NULL)
-                                    AND NOT COALESCE((lsd_package.last_resolution_bypassed = False AND (DATE(lsd_package.last_resolution_resolved_at)) IS NULL), FALSE) THEN lsd_package.n1pk_package_id
-                              END))  ),0) AS backlog
-      FROM dbt_dw.lsd_package  AS lsd_package
-      LEFT JOIN dbt_dw.base_accounts  AS base_accounts ON lsd_package.company_id = base_accounts.company_id
-      LEFT JOIN dbt_dw.current_package_direction  AS current_package_direction ON current_package_direction.package_id = lsd_package.n1pk_package_id
-      LEFT JOIN dbt_dw.last_enriched_sorting_record  AS last_enriched_sorting_record ON last_enriched_sorting_record.package_id = lsd_package.n1pk_package_id
-
-      LEFT JOIN dbt_dw.package_deadline  AS package_deadline ON package_deadline.n1pk_package_id = lsd_package.n1pk_package_id
-      WHERE ((base_accounts.client_name ) NOT LIKE '%LOGGI%' AND (base_accounts.client_name ) NOT LIKE '%Loggi%' AND (base_accounts.client_name ) NOT LIKE '%loggi%' OR (base_accounts.client_name ) IS NULL) AND (last_enriched_sorting_record.created_raw) >= ((DATEADD(month,-5, DATE_TRUNC('month', DATE_TRUNC('day',GETDATE())) ))) AND (last_enriched_sorting_record.custody_owner_type) IN ('Cajamar', 'XD Regional','Agência Loggi')
-      GROUP BY
-          (DATE_TRUNC('month', last_enriched_sorting_record.created_raw)),
-          2
-      ORDER BY
-          1 DESC
-      )
       , two_hrs AS(
         SELECT 
           TO_CHAR(ref_date::date, 'YYYY-MM') AS month,
@@ -151,7 +111,6 @@ WITH opav1 AS(
           from cogs_hc.lex_jou_events
           group by month,dc_number
           )
-          
         , abs AS(
           select 
             TO_CHAR(ref_date::date, 'YYYY-MM') AS month,
@@ -159,39 +118,47 @@ WITH opav1 AS(
             ROUND(abs_qtd / total_qtd, 2) AS abs
             from cogs_hc.lex_abs
         )
+        , sla AS (
+        SELECT
+            base_package.planned_routing_code  AS "routing_code",
+            (TO_CHAR(DATE_TRUNC('month', package_deadline.promiseddate ), 'YYYY-MM')) AS "month",
+            ( COUNT(CASE WHEN (( package_deadline.package_sla_achievement  ) = 'Dentro do prazo') THEN 1 ELSE NULL END) )*1.0/NULLIF(( COUNT(CASE WHEN  package_deadline.is_deliverable   THEN 1 ELSE NULL END) ),0)  AS "sla_percentage"
+        FROM dbt_dw.base_package  AS base_package
+        LEFT JOIN dbt_dw.package_deadline  AS package_deadline ON base_package.n1pk_package_id = package_deadline.n1pk_package_id
+        WHERE ((( package_deadline.promiseddate  ) >= ((DATEADD(month,-5, DATE_TRUNC('month', DATE_TRUNC('day',GETDATE())) ))) AND ( package_deadline.promiseddate  ) < ((DATEADD(month,5, DATEADD(month,-5, DATE_TRUNC('month', DATE_TRUNC('day',GETDATE())) ) )))))
+        GROUP BY
+            (DATE_TRUNC('month', package_deadline.promiseddate )),
+            1
+        )
       SELECT
-          "package_process_deadline"."started_at_dc_routing_code" AS routing_code,
-          DATE_TRUNC('month', "package_deadline"."first_validation") AS month,
-          ( COUNT(DISTINCT CASE WHEN (( package_deadline.package_sla_achievement  ) = 'Dentro do prazo') THEN package_deadline.n1pk_package_id  ELSE NULL END) )*1.0/NULLIF(( COUNT(DISTINCT CASE WHEN  package_deadline.is_deliverable   THEN package_deadline.n1pk_package_id  ELSE NULL END) ),0)  AS sla,
+          sla.routing_code,
+          sla.month,
           produtividade_media,
           ROUND(opav, 2) AS opav,
-          backlog,
           loss_rate,
           produtividade.type_dc,
           abs, 
           two_hrs,
-          cnt_interjornada
+          cnt_interjornada,
+          sla.sla_percentage
       FROM
-          "dbt_dw"."base_package" AS "base_package"
-          LEFT JOIN "dbt_dw"."package_deadline" AS "package_deadline" ON "base_package"."n1pk_package_id" = "package_deadline"."n1pk_package_id"
-          LEFT JOIN "prodpostgres"."promiseland_packageprocessdeadline" AS "package_process_deadline" ON "base_package"."n1pk_package_id" = "package_process_deadline"."package_id"
-          LEFT JOIN produtividade ON produtividade.routing_code = package_process_deadline.started_at_dc_routing_code AND produtividade.month = (TO_CHAR(DATE_TRUNC('month', "package_deadline"."first_validation"), 'YYYY-MM'))
+          sla 
+          LEFT JOIN produtividade ON produtividade.routing_code = sla.routing_code AND produtividade.month = sla.month
           LEFT JOIN lossrate ON lossrate.month = produtividade.month AND loss_responsible_dc = produtividade.routing_code
-          INNER join backlog ON backlog.month = produtividade.month AND backlog.routing_code = loss_responsible_dc
           LEFT JOIN opav ON opav.started_at_dc_routing_code = loss_responsible_dc and opav.month = produtividade.month
           LEFT JOIN two_hrs ON two_hrs.dc_number = produtividade.id AND two_hrs.month = produtividade.month
           LEFT JOIN abs ON abs.dc_number = produtividade.id AND abs.month = produtividade.month
-      WHERE DATE_TRUNC('month', "package_deadline"."first_validation") >= 2023-12
+      WHERE sla.month >= 2023-12
       GROUP BY
-          (DATE_TRUNC('month', "package_deadline"."first_validation")),
+          sla.month,
           1,
           produtividade_media,
           opav,
-          backlog,
           loss_rate,
           produtividade.type_dc,
           abs, 
           two_hrs,
-          cnt_interjornada
+          cnt_interjornada,
+          sla.sla_percentage
       ORDER BY
-          3 DESC
+          2 DESC
