@@ -67,6 +67,86 @@ class GerarTabela:
             DataFrame: A pandas DataFrame containing the data read from 'dados_cs.sql'.
         """
         return _self.leitor.read_sql("SQL", "dados_lex.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_opav(_self):
+        """
+        This method reads the 'dados_opav.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'opav.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "opav.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_produtividade(_self):
+        """
+        This method reads the 'dados_produtividade.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'produtividade.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "produtividade.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_inventario(_self):
+        """
+        This method reads the 'inventario.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'inventario.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "inventario.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_sla(_self):
+        """
+        This method reads the 'sla.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'sla.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "sla.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_abs(_self):
+        """
+        This method reads the 'abs.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'abs.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "abs.sql")
+    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_two_hrs(_self):
+        """
+        This method reads the 'two_hrs.sql' file and returns its content.
+
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'two_hrs.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "two_hrs.sql")
+    
+    
 
 
 st.cache_data(show_spinner=False, ttl=840000)
