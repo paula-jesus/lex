@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 from functools import reduce
+import time
 
 estilizador = EstilizarPagina()
 estilizador.set_page_config()
@@ -23,6 +24,8 @@ dados_inventario = tabela.gerar_dados_inventario()
 dados_abs = tabela.gerar_dados_abs()
 dados_two_hrs = tabela.gerar_dados_two_hrs()
 dados_sla = tabela.gerar_dados_sla()
+
+loading_message.progress(30, text=text)
 
 # List of all dataframes
 dfs = [dados_opav, dados_produtividade, dados_inventario, dados_abs, dados_two_hrs, dados_sla]
@@ -86,7 +89,7 @@ dados_compilados['month'] = dados_compilados['month'].dt.to_timestamp().dt.strft
 
 dados_compilados[['sla', 'opav', 'abs', 'Auditoria','Auto avaliação']] = dados_compilados[['sla', 'opav', 'abs', 'Auditoria','Auto avaliação']].apply(lambda x: x*100)
 
-dados_metas_planilha[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) Agências', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação']] = dados_metas_planilha[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) Agências', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação']].apply(lambda x: x*100)
+dados_metas_planilha[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação']] = dados_metas_planilha[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação']].apply(lambda x: x*100)
 
 dados_pesos[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) Agências', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação', 'Produtividade', 'Atendimento ao SLA (%) Agências']] = dados_pesos[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) Agências', 'Custo/ Pacote ($) XDs', 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas', 'Auditoria','Auto avaliação', 'Produtividade', 'Atendimento ao SLA (%) Agências']].apply(lambda x: x*100)
 
@@ -176,6 +179,42 @@ row_labels = ['Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Prod
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row, axis=1)
 
 rendered_table = pivot_table_reset.to_html()
+tabela_detalhamento = f"""
+<div style="display: flex; justify-content: center;">
+<div style="max-height: 500px; overflow-y: auto;">
+        {rendered_table}
+"""
+
+def atingimento_com_peso(row):
+    meta = row['Meta']
+    peso = row['Peso']
+    row_name = row.name
+    if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo/ Pacote','Loss Rate','OPAV'):
+        return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+    else:
+        # return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+        return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
+    
+dados_mergeados_meta['Meta'] = pd.to_numeric(dados_mergeados_meta['Meta'], errors='coerce')
+dados_mergeados_meta['Peso'] = pd.to_numeric(dados_mergeados_meta['Peso'], errors='coerce')
+
+# st.write(agrupado_por_pilar)
+
+dados_mergeados_meta.dropna(subset=['Meta'], inplace=True)
+
+tabela_com_pesos_styled = dados_mergeados_meta.apply(atingimento_com_peso, axis=1)
+
+tabela_com_pesos_styled = tabela_com_pesos_styled.fillna(0)
+
+totals = tabela_com_pesos_styled.sum()
+
+tabela_com_pesos_styled.loc['Atingimento Total'] = totals
+
+tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'Peso'], axis=1)
+
+tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.2f}%')
+
+rendered_table = tabela_com_pesos_styled.to_html()
 centered_table = f"""
 <div style="display: flex; justify-content: center;">
 <div style="max-height: 500px; overflow-y: auto;">
@@ -188,47 +227,11 @@ if on:
 
     st.write("  ")
     st.write("  ")
-    st.write(centered_table, unsafe_allow_html=True)
+    st.write(tabela_detalhamento, unsafe_allow_html=True)
     st.write("  ")
     st.write("  ")
 
 else:
-
-    def atingimento_com_peso(row):
-        meta = row['Meta']
-        peso = row['Peso']
-        row_name = row.name
-        if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo/ Pacote','Loss Rate','OPAV'):
-            return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
-        else:
-            # return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
-            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
-        
-    dados_mergeados_meta['Meta'] = pd.to_numeric(dados_mergeados_meta['Meta'], errors='coerce')
-    dados_mergeados_meta['Peso'] = pd.to_numeric(dados_mergeados_meta['Peso'], errors='coerce')
-
-    # st.write(agrupado_por_pilar)
-
-    dados_mergeados_meta.dropna(subset=['Meta'], inplace=True)
-
-    tabela_com_pesos_styled = dados_mergeados_meta.apply(atingimento_com_peso, axis=1)
-
-    tabela_com_pesos_styled = tabela_com_pesos_styled.fillna(0)
-
-    totals = tabela_com_pesos_styled.sum()
-
-    tabela_com_pesos_styled.loc['Atingimento Total'] = totals
-
-    tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'Peso'], axis=1)
-
-    tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.2f}%')
-
-    rendered_table = tabela_com_pesos_styled.to_html()
-    centered_table = f"""
-    <div style="display: flex; justify-content: center;">
-    <div style="max-height: 500px; overflow-y: auto;">
-            {rendered_table}
-    """
 
     st.write("  ")
     st.write("  ")
@@ -684,6 +687,7 @@ with tab3:
     )
     col2.plotly_chart(fig)
 
+loading_message.progress(80, text=text)
 
 with tab5:
 
@@ -817,6 +821,6 @@ with tab5:
 
     col2.plotly_chart(fig)
 
-
+loading_message.progress(100, text=text)
+time.sleep(1)
 loading_message.empty()
-
