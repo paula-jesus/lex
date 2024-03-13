@@ -227,6 +227,12 @@ if on:
 
     st.write("  ")
     st.write("  ")
+    st.write(centered_table, unsafe_allow_html=True)
+    st.write("  ")
+    st.write("  ")
+
+    st.write("  ")
+    st.write("  ")
     st.write(tabela_detalhamento, unsafe_allow_html=True)
     st.write("  ")
     st.write("  ")
@@ -238,7 +244,7 @@ else:
     st.write(centered_table, unsafe_allow_html=True)
     st.write("  ")
     st.write("  ")
-
+    
 dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
 
 dados_compilados.set_index('Mês', inplace=True)
