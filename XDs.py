@@ -5,64 +5,88 @@ from estilizador import DataframeStyler, PageStyler
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
+from functools import reduce
 
 estilizador = EstilizarPagina()
 estilizador.set_page_config()
 
 text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
+loading_message.progress(0, text=text)
 
 last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 
 tabela = GerarTabela()
-dados_looker = tabela.gerar_dados_lex()
+dados_opav = tabela.gerar_dados_opav()
+dados_produtividade = tabela.gerar_dados_produtividade()
+dados_inventario = tabela.gerar_dados_inventario()
+dados_abs = tabela.gerar_dados_abs()
+dados_two_hrs = tabela.gerar_dados_two_hrs()
+dados_sla = tabela.gerar_dados_sla()
+
+# List of all dataframes
+dfs = [dados_opav, dados_produtividade, dados_inventario, dados_abs, dados_two_hrs, dados_sla]
+
+dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer'), dfs)
+
 dados_planilha = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','fonte_oficial')
-dados_metas = gerar_tabela_sheets('1htP_m0eMy7pMxvB4EJIMIPfspzHZv66pH5cpLxjprMU','metas')
+dados_pesos = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','peso_kpis')
 
 dados_metas_planilha = gerar_tabela_sheets('1wQs6k5eGKASNxSMYcfHwP5HK7PSEDo0t_uzLYke_u3s','fonte_metas')
 
 mask = dados_looker['type_dc'] == 'Crossdocking'
 dados_looker = dados_looker[mask]
 
-mask = dados_metas['type_dc'] == 'Crossdocking'
-dados_metas = dados_metas[mask]
-
 mask = dados_metas_planilha['BASE'] == 'XD'
 dados_metas_planilha = dados_metas_planilha[mask]
+
+mask = dados_pesos['BASE'] == 'XD'
+dados_pesos = dados_pesos[mask]
 
 dados_planilha = dados_planilha.drop('#', axis=1)
 
 dados_metas_planilha = dados_metas_planilha.drop('#', axis=1)
 
-loading_message.progress(0, text=text)
+dados_pesos = dados_pesos.drop('#', axis=1)
 
 dados_looker['month'] = pd.to_datetime(dados_looker['month'])
 dados_looker['month'] = dados_looker['month'].dt.strftime('%Y-%m')
-mask = dados_looker['month'] >= '2023-12'
+mask = dados_looker['month'] > '2023-12'
 dados_looker = dados_looker[mask]
 
-for column in ['Auditoria', 'Auto avaliação','Programa 5S']:
+for column in ['Auditoria', 'Auto avaliação','Programa 5S', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
 
-for column in ['Auditoria', 'Auto avaliação','Programa 5S (%)', 'OPAV', 'Produtividade', 'Loss Rate ($)', 'Absenteísmo (%)']:
+for column in ['Auditoria', 'Auto avaliação','Programa 5S (%)', 'OPAV', 'Produtividade', 'Loss Rate ($)', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) XDs', 'Custo/ Pacote ($) XDs']:
     dados_metas_planilha[column] = pd.to_numeric(dados_metas_planilha[column], errors='coerce')
+
+for column in ['Auditoria', 'Auto avaliação','Programa 5S (%)', 'OPAV', 'Produtividade', 'Loss Rate ($)', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) XDs', 'Custo/ Pacote ($) XDs']:
+    dados_pesos[column] = pd.to_numeric(dados_pesos[column], errors='coerce')
 
 dados_looker['month'] = pd.to_datetime(dados_looker['month']).dt.to_period('M')
 dados_planilha['month'] = pd.to_datetime(dados_planilha['month']).dt.to_period('M')
 
 dados_metas_planilha['month'] = pd.to_datetime(dados_metas_planilha['month']).dt.to_period('M')
+dados_pesos['month'] = pd.to_datetime(dados_pesos['month']).dt.to_period('M')
 ########lembrar de calcular o resultado com variacao por mes########
 
 dados_planilha['routing_code'] = dados_planilha['routing_code'].replace('XDCJ2', 'CJ2')
 dados_metas_planilha['routing_code'] = dados_metas_planilha['routing_code'].replace('XDCJ2', 'CJ2')
+dados_pesos['routing_code'] = dados_pesos['routing_code'].replace('XDCJ2', 'CJ2')
 
 dados_planilha = dados_planilha.replace('N/A', '')
 
 dados_metas_planilha = dados_metas_planilha.replace('N/A', '')
 
+dados_pesos = dados_pesos.replace('N/A', '')
+
 dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='left')
 
 dados_compilados['month'] = dados_compilados['month'].dt.to_timestamp().dt.strftime('%Y-%m')
+
+dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade']] = dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade']] * 100
+
+dados_pesos[['Programa 5S (%)']] = dados_pesos[['Programa 5S (%)']] * 10
 
 #Filtros
 
@@ -72,7 +96,7 @@ dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados,
 
 dados_compilados = dados_compilados.drop(['sla'], axis=1, errors='ignore')
 
-dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate','Auto avaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas'}, inplace=True)
+dados_compilados.rename(columns={'month': 'Mês', 'opav': 'OPAV', 'produtividade_media': 'Produtividade Média', 'loss_rate': 'Loss Rate','Auto avaliacao':'Auto avaliação','backlog':'Backlog','two_hrs':'Ocorrências de +2HE','abs':'Absenteísmo','cnt_interjornada':'Ocorrências de -11Hs Interjornadas', 'percent_inventoried': 'Inventário' }, inplace=True)
 
 dados_lex_gauge = dados_compilados[dados_compilados['Mês'] == last_month.strftime('%Y-%m')]
 
@@ -86,58 +110,63 @@ pivot_table = pivot_table.reset_index()
 
 last_month = pd.to_datetime('now').to_period('M') - 1
 dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['month'] == last_month]
+dados_pesos = dados_pesos[dados_pesos['month'] == last_month]
+
+dados_metas_planilha.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário'}, inplace=True)
+dados_pesos.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário'}, inplace=True)
 
 metas_pivot = dados_metas_planilha.pivot_table(columns='month', aggfunc='median')
 
+pesos_pivot = dados_pesos.pivot_table(columns='month', aggfunc='median')
+
+metas_pivot.loc[['Programa 5S']] *= 10
+
 metas_pivot = metas_pivot.reset_index()
 
-st.write(metas_pivot)
+pesos_pivot = pesos_pivot.reset_index()
 
-st.write(pivot_table)
-
-# Join metas_pivot and pivot_table on the index
 combined_df = pd.merge(pivot_table, metas_pivot, left_on='index', right_on='index', how='left')
 
-# combined_df = pivot_table.merge(metas_pivot, left_index=True, right_index=True)
-
-# Get the column name for the last month
 last_month_column = metas_pivot.columns[-1]
 
-# Rename the column with the values of the current month to 'Meta'
 combined_df = combined_df.rename(columns={last_month_column: 'Meta'})
 
-# Move 'Meta' column to the last position
 columns = combined_df.columns.tolist()
 columns.remove('Meta')
 columns.append('Meta')
-combined_df = combined_df[columns]
+dados_mergeados_meta = combined_df[columns]
 
-st.write(combined_df)
+tabela_com_pesos = pd.merge(dados_mergeados_meta, pesos_pivot, left_on='index', right_on='index', how='left')
 
+last_month_column = pesos_pivot.columns[-1]
 
+tabela_com_pesos = tabela_com_pesos.rename(columns={last_month_column: 'Peso'})
 
+columns = tabela_com_pesos.columns.tolist()
+columns.remove('Peso')
+columns.append('Peso')
+dados_mergeados_meta = tabela_com_pesos[columns]
 
-
-dados_mergeados_meta = pd.merge(pivot_table, dados_metas, left_on='index', right_on='KPI', how='right')
-
-dados_mergeados_meta.set_index('KPI', inplace=True)
+dados_mergeados_meta.set_index(dados_mergeados_meta.columns[0], inplace=True)
 
 dados_mergeados_meta.index.name = None
 
-tabela_com_pesos = dados_mergeados_meta.copy()
-
-dados_mergeados_meta = dados_mergeados_meta.drop(['type_dc', 'peso', 'pilar', 'index'], axis=1)
-
 pivot_table_reset = dados_mergeados_meta.fillna('')
 
-pivot_table_reset.rename(columns={'Mês': 'KPIs'}, inplace=True)
+pivot_table_reset.loc[['OPAV', 'Absenteísmo','Auditoria','Auto avaliação', 'Inventário', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base']] *= 100
 
-pivot_table_reset.loc[['OPAV', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação', 'Inventario', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base (%)'	]] *= 100
+pivot_table_reset.loc[['Programa 5S']] *= 10
+
+# def format_row_with_percent(row):
+#     return row.apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) else x)
 
 def format_row_with_percent(row):
-    return row.apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) else x)
+    row.iloc[:-1] = row.iloc[:-1].apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) and np.isfinite(x) else x)
+    last_cell = row.iloc[-1]
+    row.iloc[-1] = f'{last_cell:.0f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) and last_cell == int(last_cell) else f'{last_cell:.2f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) else last_cell
+    return row
 
-row_labels = ['OPAV', 'Absenteísmo', 'Loss Rate','Auditoria','Auto avaliação', 'Inventario', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base (%)']  
+row_labels = ['OPAV', 'Absenteísmo','Auditoria','Auto avaliação', 'Inventário', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Programa 5S']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row_with_percent, axis=1)
 
 def format_row(row):
@@ -145,16 +174,6 @@ def format_row(row):
 
 row_labels = ['Programa 5S','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Produtividade Média']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row, axis=1)
-
-# def color_based_on_row(row): 
-#     meta = row['Meta'] 
-#     row_name = row.name 
-#     if row_name in ('Absenteísmo','OPAV','Loss Rate','Auditoria','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas'): 
-#         return ['color: red' if val > meta else 'color: black' for val in row] 
-#     else: 
-#         return ['color: red' if val < meta else 'color: black' for val in row]
-
-# styled_df = pivot_table_reset.style.apply(color_based_on_row, axis=1)
 
 rendered_table = pivot_table_reset.to_html()
 centered_table = f"""
@@ -177,25 +196,22 @@ else:
 
     def atingimento_com_peso(row):
         meta = row['Meta']
-        peso = row['peso']
+        peso = row['Peso']
         row_name = row.name
         if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo/ Pacote','Loss Rate','OPAV'):
-            return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            return pd.Series([peso * 100 if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
         else:
             # return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
-            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            return pd.Series([peso * 100 if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso * 100 if isinstance(val, (int, float)) else None for val in row], index=row.index)
         
-    tabela_com_pesos['Meta'] = pd.to_numeric(tabela_com_pesos['Meta'], errors='coerce')
-
-    agrupado_por_pilar = tabela_com_pesos.groupby('pilar').sum()
+    dados_mergeados_meta['Meta'] = pd.to_numeric(dados_mergeados_meta['Meta'], errors='coerce')
+    dados_mergeados_meta['Peso'] = pd.to_numeric(dados_mergeados_meta['Peso'], errors='coerce')
 
     # st.write(agrupado_por_pilar)
 
-    tabela_com_pesos = tabela_com_pesos.drop(['type_dc', 'pilar', 'index'], axis=1)
+    dados_mergeados_meta.dropna(subset=['Meta'], inplace=True)
 
-    tabela_com_pesos.dropna(subset=['Meta'], inplace=True)
-
-    tabela_com_pesos_styled = tabela_com_pesos.apply(atingimento_com_peso, axis=1)
+    tabela_com_pesos_styled = dados_mergeados_meta.apply(atingimento_com_peso, axis=1)
 
     tabela_com_pesos_styled = tabela_com_pesos_styled.fillna(0)
 
@@ -203,7 +219,7 @@ else:
 
     tabela_com_pesos_styled.loc['Atingimento Total'] = totals
 
-    tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'peso'], axis=1)
+    tabela_com_pesos_styled = tabela_com_pesos_styled.drop(['Meta', 'Peso'], axis=1)
 
     tabela_com_pesos_styled = tabela_com_pesos_styled.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.1f}%')
 
@@ -239,7 +255,15 @@ with tab1:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Aderência ao Plano de Capacitação da Qualidade definido para a Base", 'Aderência ao Plano de Capacitação da Qualidade', "Meta: 90%", 0.03, 0.03))
+    dados_metas_aderencia = dados_metas_planilha[['Aderência ao Plano de Capacitação da Qualidade definido para a Base']].rename(columns={'Aderência ao Plano de Capacitação da Qualidade definido para a Base': 'meta'})
+
+    meta_value_decimal = dados_metas_aderencia['meta'].median()
+    
+    meta_value_percent = str(dados_metas_aderencia['meta'].median() * 100)
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Aderência ao Plano de Capacitação da Qualidade definido para a Base", 'Aderência ao Plano de Capacitação da Qualidade', f"Meta: {meta_value_percent}%", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Aderência ao Plano de Capacitação da Qualidade definido para a Base'].median()
 
@@ -293,7 +317,15 @@ with tab1:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Absenteísmo", 'Absenteísmo', "Meta: 3%", 0.03, 0.03))
+    dados_metas_abs = dados_metas_planilha[['Absenteísmo']].rename(columns={'Absenteísmo': 'meta'})
+
+    meta_value_decimal = dados_metas_abs['meta'].median()
+
+    meta_value_percent = str(dados_metas_abs['meta'].median() * 100)
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Absenteísmo", 'Absenteísmo', f"Meta: {meta_value_percent}%", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Absenteísmo'].median()
 
@@ -305,14 +337,14 @@ with tab1:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Absenteísmo", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 0.03, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 0.1]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 0.03], 'color': '#c9f1ac'},  
-                    {'range': [0.03, 0.1], 'color': '#fab8a3'},  
+                    {'range': [0, meta_value_decimal], 'color': '#c9f1ac'},  
+                    {'range': [meta_value_decimal, 0.1], 'color': '#fab8a3'},  
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -347,7 +379,15 @@ with tab1:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    chart = create_area_plot(dados_lex_resampled, "Ocorrências de +2HE", 'Ocorrências de +2HE', "Meta: 0", 0, 0)
+    dados_metas_2he = dados_metas_planilha[['Ocorrências de +2HE']].rename(columns={'Ocorrências de +2HE': 'meta'})
+
+    meta_value_decimal = dados_metas_2he['meta'].median()
+
+    meta_value_percent = str(dados_metas_2he['meta'].median())
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    chart = create_area_plot(dados_lex_resampled, "Ocorrências de +2HE", 'Ocorrências de +2HE', f"Meta: {meta_value_percent}", meta_value_decimal, meta_value_decimal)
 
     col1.plotly_chart(chart)
 
@@ -403,7 +443,15 @@ with tab1:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Ocorrências de -11Hs Interjornadas", 'Ocorrências de -11Hs Interjornadas', "Meta: 0", 0, 0))
+    dados_metas_11hs = dados_metas_planilha[['Ocorrências de -11Hs Interjornadas']].rename(columns={'Ocorrências de -11Hs Interjornadas': 'meta'})
+
+    meta_value_decimal = dados_metas_11hs['meta'].median()
+
+    meta_value_percent = str(dados_metas_11hs['meta'].median())
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Ocorrências de -11Hs Interjornadas", 'Ocorrências de -11Hs Interjornadas', f"Meta: {meta_value_percent}", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Ocorrências de -11Hs Interjornadas'].median()
 
@@ -415,7 +463,7 @@ with tab1:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Ocorrências de -11Hs Interjornadas", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 0, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 100]},
@@ -458,7 +506,15 @@ with tab2:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "OPAV", 'OPAV', "Meta: 36%", 0.36, 0.36))
+    dados_metas_opav = dados_metas_planilha[['OPAV']].rename(columns={'OPAV': 'meta'})
+
+    meta_value_decimal = dados_metas_opav['meta'].median()
+
+    meta_value_percent = str(dados_metas_opav['meta'].median() * 100)
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "OPAV", 'OPAV', f"Meta: {meta_value_percent}%", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['OPAV'].median() 
 
@@ -468,14 +524,14 @@ with tab2:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "OPAV", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 0.36, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 1]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 0.36], 'color': '#c9f1ac'},
-                    {'range': [0.36, 1], 'color': '#fab8a3'}
+                    {'range': [0, meta_value_decimal], 'color': '#c9f1ac'},
+                    {'range': [meta_value_decimal, 1], 'color': '#fab8a3'}
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -510,7 +566,15 @@ with tab2:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Programa 5S", 'Programa 5S', "Meta: 8", 8, 8))
+    dados_metas_5s = dados_metas_planilha[['Programa 5S']].rename(columns={'Programa 5S': 'meta'})
+
+    meta_value_decimal = dados_metas_5s['meta'].median() * 10
+
+    meta_value_percent = str(dados_metas_5s['meta'].median() * 10)
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Programa 5S", 'Programa 5S', f"Meta: {meta_value_percent}%", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Programa 5S'].median()
 
@@ -522,14 +586,14 @@ with tab2:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Programa 5S", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 8, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 10]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 8], 'color': '#fab8a3'}, 
-                    {'range': [8, 10], 'color': '#c9f1ac'}, 
+                    {'range': [0, meta_value_decimal], 'color': '#fab8a3'}, 
+                    {'range': [meta_value_decimal, 10], 'color': '#c9f1ac'}, 
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -556,8 +620,9 @@ with tab2:
 
     col2.plotly_chart(fig)
 
-
 with tab3:
+
+    col1, col2 = st.columns([1.1, 1])
 
     value = dados_compilados['Produtividade Média'].median()  
 
@@ -565,7 +630,15 @@ with tab3:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Produtividade Média", 'Produtividade Média', "Meta: 1100", 1100, 1100))
+    dados_metas_prod = dados_metas_planilha[['Produtividade Média']].rename(columns={'Produtividade Média': 'meta'})
+
+    meta_value_decimal = dados_metas_prod['meta'].median()
+
+    meta_value_percent = str(dados_metas_prod['meta'].median())
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Produtividade Média", 'Produtividade Média', f"Meta: {meta_value_percent}", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Produtividade Média'].median()
 
@@ -577,14 +650,14 @@ with tab3:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Produtividade Média", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 1100, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 1500]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 1100], 'color': '#fab8a3'}, 
-                    {'range': [1100, 1500], 'color': '#c9f1ac'}, 
+                    {'range': [0, meta_value_decimal], 'color': '#fab8a3'}, 
+                    {'range': [meta_value_decimal, 1500], 'color': '#c9f1ac'}, 
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -625,7 +698,15 @@ with tab5:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Auditoria", 'Auditoria', "Meta: 1", 1, 1))
+    dados_metas_aud = dados_metas_planilha[['Auditoria']].rename(columns={'Auditoria': 'meta'})
+
+    meta_value_decimal = dados_metas_aud['meta'].median()
+
+    meta_value_percent = str(dados_metas_aud['meta'].median())
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Auditoria", 'Auditoria', f"Meta: {meta_value_percent}", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Auditoria'].median()  
 
@@ -637,14 +718,14 @@ with tab5:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Auditoria", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 1, 'increasing': {'color': "black"}, 'decreasing': {'color': "red"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "black"}, 'decreasing': {'color': "red"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 1.2]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 1], 'color': '#fab8a3'},
-                    {'range': [1, 1.2], 'color': '#c9f1ac'}, 
+                    {'range': [0, meta_value_decimal], 'color': '#fab8a3'},
+                    {'range': [meta_value_decimal, 1.2], 'color': '#c9f1ac'}, 
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -653,7 +734,21 @@ with tab5:
                 }
             }
         ),
-        layout={'width': 500, 'height': 320}
+        layout={
+            'annotations': [
+                {
+                    'x': 0.5,
+                    'y': -0.25,
+                    'showarrow': False,
+                    'text': "Valor referente ao último mês completo",
+                    'xref': "paper",
+                    'yref': "paper"
+                }
+            ],
+
+            'width': 500,
+            'height': 320
+        }
     )
  
     col2.plotly_chart(fig)
@@ -666,7 +761,15 @@ with tab5:
 
     dados_lex_resampled['Mês'] = dados_lex_resampled['Mês'].dt.strftime('%b %Y')
 
-    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Auto avaliação", 'Auto avaliação', "Meta: 1", 1, 1))
+    dados_metas_auto = dados_metas_planilha[['Auto avaliação']].rename(columns={'Auto avaliação': 'meta'})
+
+    meta_value_decimal = dados_metas_auto['meta'].median()
+
+    meta_value_percent = str(dados_metas_auto['meta'].median())
+
+    meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
+
+    col1.plotly_chart(create_area_plot(dados_lex_resampled, "Auto avaliação", 'Auto avaliação', f"Meta: {meta_value_percent}", meta_value_decimal, meta_value_decimal))
 
     value = dados_lex_gauge['Auto avaliação'].median()
 
@@ -678,14 +781,14 @@ with tab5:
                 value=value,
                 domain={'x': [0, 1], 'y': [0, 1]},
                 title={'text': "Auto avaliação", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-                delta={'reference': 1, 'increasing': {'color': "RebeccaPurple"}, 'decreasing': {'color': "black"}},
+                delta={'reference': meta_value_decimal, 'increasing': {'color': "RebeccaPurple"}, 'decreasing': {'color': "black"}},
                 number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
                 gauge={
                     'axis': {'range': [0, 1.2]},
                     'bar': {'color': '#8fe1ff'},
                     'steps': [
-                    {'range': [0, 1], 'color': '#fab8a3'},
-                    {'range': [1, 1.2], 'color': '#c9f1ac'}, 
+                    {'range': [0, meta_value_decimal], 'color': '#fab8a3'},
+                    {'range': [meta_value_decimal, 1.2], 'color': '#c9f1ac'}, 
                     ],
                     'threshold': {
                         'line': {'color': "black", 'width': 4},
@@ -694,7 +797,21 @@ with tab5:
                     }
                 }
             ),
-            layout={'width': 500, 'height': 320}
+            layout={
+            'annotations': [
+                {
+                    'x': 0.5,
+                    'y': -0.25,
+                    'showarrow': False,
+                    'text': "Valor referente ao último mês completo",
+                    'xref': "paper",
+                    'yref': "paper"
+                }
+            ],
+
+            'width': 500,
+            'height': 320
+        }
 
     )
 
