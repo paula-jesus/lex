@@ -283,14 +283,14 @@ with tab1:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Aderência ao Plano de Capacitação da Qualidade", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': 0.9, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
+            delta={'reference': 0.9, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 1]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 0.9], 'color': '#c9f1ac'},  
-                    {'range': [0.9, 1], 'color': '#fab8a3'},  
+                    {'range': [0, 0.9], 'color': '#fab8a3'},  
+                    {'range': [0.9, 1], 'color': '#c9f1ac'},  
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
