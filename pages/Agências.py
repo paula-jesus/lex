@@ -284,14 +284,14 @@ with tab1:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Aderência ao Plano de Capacitação da Qualidade", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference':meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
+            delta={'reference':meta_value_decimal, 'increasing': {'color': "green"}, 'decreasing': {'color': "red"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 100]},
                 'bar': {'color': '#8fe1ff'},
                 'steps': [
-                    {'range': [0, 90], 'color': '#c9f1ac'},  
-                    {'range': [90, 100], 'color': '#fab8a3'},  
+                    {'range': [0, 90], 'color': '#fab8a3'},  
+                    {'range': [90, 100], 'color': '#c9f1ac'},  
                 ],
                 'threshold': {
                     'line': {'color': "black", 'width': 4},
@@ -346,7 +346,7 @@ with tab1:
             value=value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Absenteísmo", 'font': {'size': 18, 'color': 'black', 'family': 'Arial'}},
-            delta={'reference': meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "black"}},
+            delta={'reference': meta_value_decimal, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
             number={'font': {'size': 21, 'color': 'black', 'family': 'Arial'}},
             gauge={
                 'axis': {'range': [0, 10]},
