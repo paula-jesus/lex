@@ -96,7 +96,7 @@ dados_pesos[[ 'OPAV', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação 
 
 #Filtros
 
-dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "month", "Mês")
+# dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "month", "Mês")
 
 dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "routing_code", "Routing Code")
 
