@@ -249,6 +249,18 @@ dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
 
 dados_compilados.set_index('Mês', inplace=True)
 
+st.write("**O cálculo dos pesos é feito de acordo com as seguintes premissas:**")
+
+st.info("""
+**1. Para KPIs em que quanto menor o valor, melhor (por exemplo, OPAV e Absenteísmo):**
+
+- Se a base alcançar um resultado menor ou igual à meta, será pontuada com o valor integral do peso.
+
+**2. Para KPIs em que quanto maior o valor, melhor (por exemplo, SLA e Produtividade):**
+
+- Se a base alcançar um valor maior que a meta, será pontuada com o valor integral do peso.
+- Se a base alcançar um valor menor que a meta, será pontuada de acordo com o cálculo: (resultado atingido / meta) * peso.""")
+
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Pessoas","Qualidade","Entrega", "Financeiro", "Auditoria"])
 
 with tab1:
