@@ -146,8 +146,19 @@ class GerarTabela:
         """
         return _self.leitor.read_sql("SQL", "two_hrs.sql")
     
-    
+    @st.cache_data(show_spinner=False, ttl=840000)
+    def gerar_dados_loss(_self):
+        """
+        This method reads the 'loss.sql' file and returns its content.
 
+        Args:
+            _self (object): Instance of the class. 
+
+        Returns:
+            DataFrame: A pandas DataFrame containing the data read from 'loss.sql'.
+        """
+        return _self.leitor.read_sql("SQL", "loss.sql")
+    
 
 st.cache_data(show_spinner=False, ttl=840000)
 def gerar_tabela_sheets(key, worksheet):
