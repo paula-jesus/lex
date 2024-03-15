@@ -24,11 +24,12 @@ dados_inventario = tabela.gerar_dados_inventario()
 dados_abs = tabela.gerar_dados_abs()
 dados_two_hrs = tabela.gerar_dados_two_hrs()
 dados_sla = tabela.gerar_dados_sla()
+dados_loss = tabela.gerar_dados_loss()
 
 loading_message.progress(30, text=text)
 
 # List of all dataframes
-dfs = [dados_opav, dados_produtividade, dados_inventario, dados_abs, dados_two_hrs, dados_sla]
+dfs = [dados_opav, dados_produtividade, dados_inventario, dados_abs, dados_two_hrs, dados_sla, dados_loss]
 
 dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer'), dfs)
 
@@ -57,7 +58,7 @@ dados_looker['month'] = dados_looker['month'].dt.strftime('%Y-%m')
 mask = dados_looker['month'] > '2023-12'
 dados_looker = dados_looker[mask]
 
-for column in ['Auditoria', 'Auto avaliação','Programa 5S', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base']:
+for column in ['Auditoria', 'Auto avaliação','Programa 5S', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Custo / Pacote']:
     dados_planilha[column] = pd.to_numeric(dados_planilha[column], errors='coerce')
 
 for column in ['Auditoria', 'Auto avaliação','Programa 5S (%)', 'OPAV', 'Produtividade', 'Loss Rate ($)', 'Absenteísmo (%)', 'Aderência ao Plano de Capacitação da Qualidade definido para a Base', 'Inventario (%) XDs', 'Custo/ Pacote ($) XDs']:
@@ -83,17 +84,15 @@ dados_metas_planilha = dados_metas_planilha.replace('N/A', '')
 
 dados_pesos = dados_pesos.replace('N/A', '')
 
-dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='left')
+dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='inner')
 
 dados_compilados['month'] = dados_compilados['month'].dt.to_timestamp().dt.strftime('%Y-%m')
 
-dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade', 'Inventario (%) XDs']] = dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade', 'Inventario (%) XDs']] * 100
+dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade', 'Inventario (%) XDs', 'Loss Rate ($)', 'Custo/ Pacote ($) XDs']] = dados_pesos[[ 'Total de ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas','Produtividade', 'Inventario (%) XDs', 'Loss Rate ($)', 'Custo/ Pacote ($) XDs']] * 100
 
 dados_pesos[['Programa 5S (%)']] = dados_pesos[['Programa 5S (%)']] * 10
 
 #Filtros
-
-# dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "month", "Mês")
 
 dados_compilados, dados_metas_planilha = filter_by_multiselect(dados_compilados, dados_metas_planilha, "routing_code", "Routing Code")
 
@@ -115,8 +114,8 @@ last_month = pd.to_datetime('now').to_period('M') - 1
 dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['month'] == last_month]
 dados_pesos = dados_pesos[dados_pesos['month'] == last_month]
 
-dados_metas_planilha.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário'}, inplace=True)
-dados_pesos.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário'}, inplace=True)
+dados_metas_planilha.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário', 'Loss Rate ($)': 'Loss Rate', 'Custo/ Pacote ($) XDs': 'Custo / Pacote'}, inplace=True)
+dados_pesos.rename(columns={'Absenteísmo (%)': 'Absenteísmo','Total de ocorrências de +2HE': 'Ocorrências de +2HE', 'Total de ocorrências de -11Hs Interjornadas':'Ocorrências de -11Hs Interjornadas', 'Produtividade':'Produtividade Média', 'Programa 5S (%)': 'Programa 5S', 'Inventario (%) XDs': 'Inventário', 'Loss Rate ($)': 'Loss Rate', 'Custo/ Pacote ($) XDs': 'Custo / Pacote'}, inplace=True)
 
 metas_pivot = dados_metas_planilha.pivot_table(columns='month', aggfunc='median')
 
@@ -180,6 +179,15 @@ def format_row(row):
 row_labels = ['Programa 5S','Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Produtividade Média']  
 pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row, axis=1)
 
+def format_row_finance(row):
+    row.iloc[:-1] = row.iloc[:-1].apply(lambda x: f'R$ {x:.0f}' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'R$ {x:.2f}' if isinstance(x, (int, float)) and np.isfinite(x) else x)
+    last_cell = row.iloc[-1]
+    row.iloc[-1] = f'{last_cell:.0f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) and last_cell == int(last_cell) else f'{last_cell:.2f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) else last_cell
+    return row
+
+row_labels = ['Custo / Pacote', 'Loss Rate']  
+pivot_table_reset.loc[row_labels] = pivot_table_reset.loc[row_labels].apply(format_row_finance, axis=1)
+
 rendered_table = pivot_table_reset.to_html()
 tabela_detalhamento = f"""
 <div style="display: flex; justify-content: center;">
@@ -191,7 +199,7 @@ def atingimento_com_peso(row):
     meta = row['Meta']
     peso = row['Peso']
     row_name = row.name
-    if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo/ Pacote','Loss Rate','OPAV'):
+    if row_name in ('Ocorrências de +2HE','Ocorrências de -11Hs Interjornadas','Absenteísmo','Custo / Pacote','Loss Rate','OPAV'):
         return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
     else:
         return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
