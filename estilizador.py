@@ -1,51 +1,10 @@
 import streamlit as st
+import pandas as pd 
 
 
 class PageStyler:
     def __init__(self):
         pass
-
-    def style_metric_cards(
-        background_color: str = "#00000",
-        border_size_px: int = 1,
-        border_color: str = "#CCC",
-        border_radius_px: int = 5,
-        border_left_color: str = "#00bfff",
-        box_shadow: bool = True,
-    ):
-        """
-        Function to apply custom styling to metric cards.
-
-        Args:
-            background_color (str): Background color of the metric card.
-            border_size_px (int): Border size in pixels.
-            border_color (str): Border color of the metric card.
-            border_radius_px (int): Border radius in pixels.
-            border_left_color (str): Border left color of the metric card.
-            box_shadow (bool): Whether to apply a box shadow.
-
-        No return value.
-        """
-        box_shadow_str = (
-            "box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;"
-            if box_shadow
-            else "box-shadow: none !important;"
-        )
-        st.markdown(
-            f"""
-            <style>
-                div[data-testid="metric-container"] {{
-                    background-color: {background_color};
-                    border: {border_size_px}px solid {border_color};
-                    padding: 5% 5% 5% 10%;
-                    border-radius: {border_radius_px}px;
-                    border-left: 0.5rem solid {border_left_color} !important;
-                    {box_shadow_str}
-                }}
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
     def apply_general_css(self):
         """
@@ -157,28 +116,78 @@ class PageStyler:
             unsafe_allow_html=True,
         )
 
-class DataframeStyler:
-    def __init__(_self):
-        pass
 
-    def write_styled_dataframe(df):
+class Dataframes:
+    def generate_html(df):
         """
-        Function to display a styled DataFrame in the Streamlit app.
+        Generates an HTML representation of the DataFrame.
 
         Args:
-            df (DataFrame): Input data table.
+            df (DataFrame): The DataFrame to convert to HTML.
 
-        No return value.
+        Returns:
+            str: The HTML representation of the DataFrame.
         """
-        styled_df = df.style.hide_index()
-        rendered_table = styled_df.to_html()
-        centered_table = f"""
+        rendered_table = df.to_html()
+        html = """
         <div style="display: flex; justify-content: center;">
         <div style="max-height: 500px; overflow-y: auto;">
-                {rendered_table}
-        """
-        st.write(centered_table, unsafe_allow_html=True)
+                {}
+        """.format(rendered_table)
+        return html
 
-    def sample_dataframe(df, condition, sample_size):
-        filtered_df = df[condition]
-        return filtered_df.sample(n=min(sample_size, len(filtered_df)))
+    def ajustar_pivotar(df):
+        """
+        Filters the DataFrame for the last month and pivots it.
+
+        Args:
+            df (DataFrame): The DataFrame to filter and pivot.
+
+        Returns:
+            DataFrame: The filtered and pivoted DataFrame.
+        """
+        last_month = pd.to_datetime('now').to_period('M') - 1
+        df = df[df['month'] == last_month]
+        return df.pivot_table(columns='month', aggfunc='median')
+    
+    def rename_and_move_to_end(df, df2, new_column_name):
+        """
+        Renames the last column of df2 and moves it to the end of df.
+
+        Args:
+            df (DataFrame): The DataFrame to modify.
+            df2 (DataFrame): The DataFrame whose last column to rename.
+            new_column_name (str): The new name for the column.
+
+        Returns:
+            DataFrame: The modified DataFrame.
+        """
+        old_column_name = df2.columns[-1]
+        df = df.rename(columns={old_column_name: new_column_name})
+        columns = df.columns.tolist()
+        columns.remove(new_column_name)
+        columns.append(new_column_name)
+        return df[columns]
+
+    def preprocess(df, column, value):
+        """
+        Preprocesses the DataFrame based on several conditions.
+
+        Args:
+            df (DataFrame): The DataFrame to preprocess.
+            column (str): The name of the column to filter.
+            value (str): The value to filter the column by.
+
+        Returns:
+            DataFrame: The preprocessed DataFrame.
+        """
+        mask = df[column] == value
+        df = df[mask]
+        if '#' in df.columns:
+            df = df.drop('#', axis=1)
+        if 'month' in df.columns:
+            df['month'] = pd.to_datetime(df['month']).dt.to_period('M')
+        if 'routing_code' in df.columns:
+            df['routing_code'] = df['routing_code'].replace('XDCJ2', 'CJ2')
+        df = df.replace('N/A', '')
+        return df
