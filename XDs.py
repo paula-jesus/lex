@@ -28,7 +28,6 @@ dados_loss = tabela.gerar_dados_loss()
 
 loading_message.progress(30, text=text)
 
-# List of all dataframes
 dfs = [dados_opav, dados_produtividade, dados_inventario, dados_abs, dados_two_hrs, dados_sla, dados_loss]
 
 dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer'), dfs)
