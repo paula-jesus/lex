@@ -130,14 +130,14 @@ with tab1:
     dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
     meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
     col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, 'Aderência ao Plano de Capacitação da Qualidade', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-    col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, 'Aderência ao Plano de Capacitação da Qualidade', (meta_value_decimal/100), 'green', 'red', 0, 1, [0.9, 1], [0, 0.9]))
+    col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, 'Aderência ao Plano de Capacitação da Qualidade', meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
     col1, col2 = st.columns([1.1, 1])
     column_name = ABS
     dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
     meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
     col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, ABS, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-    col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, ABS, meta_value_decimal, 'green', 'red', 0, 0.1, [meta_value_decimal, 0.1], [0, meta_value_decimal]))
+    col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, ABS, meta_value_decimal, 'red', 'green', 0, 0.1, [meta_value_decimal, 0.1], [0, meta_value_decimal]))
 
     col1, col2 = st.columns([1.1, 1])
     column_name = 'Ocorrências de +2HE'
