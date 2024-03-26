@@ -57,7 +57,7 @@ dados_pesos = FormatoNumeros.convert_to_numeric(dados_pesos, columns_metas_pesos
 dados_compilados = pd.merge(dados_looker, dados_planilha, on=['month', 'routing_code'], how='inner')
 dados_compilados['month'] = dados_compilados['month'].dt.to_timestamp().dt.strftime('%Y-%m')
 
-dados_compilados[['sla', 'opav', 'abs', AUDITORIA,AUTOAVALIACAO]] = dados_compilados[['sla', 'opav', 'abs', AUDITORIA,AUTOAVALIACAO]] * 100
+dados_compilados[['sla', 'opav', 'abs', AUDITORIA,AUTOAVALIACAO, ADERENCIA]] = dados_compilados[['sla', 'opav', 'abs', AUDITORIA,AUTOAVALIACAO, ADERENCIA]] * 100
 dados_metas_planilha[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, 'Custo/ Pacote ($) XDs', HE, INTER, AUDITORIA,AUTOAVALIACAO]] = dados_metas_planilha[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, 'Custo/ Pacote ($) XDs', HE, INTER, AUDITORIA,AUTOAVALIACAO]] * 100
 dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO, CUSTOAG, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA, LOSS]] = dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO, CUSTOAG, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA, LOSS]] * 100
 
