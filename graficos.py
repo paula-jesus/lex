@@ -34,7 +34,7 @@ class Charts:
         """
         df_meta = df[[column_name]].rename(columns={column_name: 'meta'})
         meta_value_decimal = df_meta['meta'].median()
-        meta_value_percent = str(df_meta['meta'].median() * 100)
+        meta_value_percent = str(df_meta['meta'].median() * 10)
         meta_value_percent = meta_value_percent.rstrip('0').rstrip('.') if '.' in meta_value_percent else meta_value_percent
         meta_value_str = str(meta_value_decimal)
         meta_value_str = meta_value_str.rstrip('0').rstrip('.') if '.' in meta_value_str else meta_value_str

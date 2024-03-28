@@ -114,7 +114,7 @@ class PageStyler:
         </style>
         """,
             unsafe_allow_html=True,
-        )
+        )    
 
 
 class Dataframes:
@@ -191,3 +191,22 @@ class Dataframes:
             df['routing_code'] = df['routing_code'].replace('XDCJ2', 'CJ2')
         df = df.replace('N/A', '')
         return df
+
+    def gerar_tabela_final(df1, df2):
+        on = st.toggle('Visualizar detalhamento dos resultados')
+        if on:
+            st.write("  ")
+            st.write("  ")
+            st.write(df1, unsafe_allow_html=True)
+            st.write("  ")
+            st.divider()
+            st.subheader('Detalhamento dos resultados')
+            st.write(df2, unsafe_allow_html=True)
+            st.write("  ")
+            st.write("  ")
+        else:
+            st.write("  ")
+            st.write("  ")
+            st.write(df1, unsafe_allow_html=True)
+            st.write("  ")
+            st.write("  ")
