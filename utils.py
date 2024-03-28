@@ -23,7 +23,7 @@ class EstilizarPagina:
     def __init__(self):
         self.estilizador = PageStyler()
         self.PAGE_CONFIG = {
-            "page_title": "BSC LEX",
+            "page_title": "BSC LEX - Loggi",
             "page_icon": "📦",
             "layout": "centered",
         }
@@ -50,7 +50,23 @@ class EstilizarPagina:
             **2. Para KPIs em que quanto maior o valor, melhor (por exemplo, SLA e Produtividade):**
 
             - Se a base alcançar um valor maior que a meta, será pontuada com o valor integral do peso.
-            - Se a base alcançar um valor menor que a meta, será pontuada de acordo com o cálculo: (resultado atingido / meta) * peso.""")
+            - Se a base alcançar um valor menor que a meta, será pontuada de acordo com o cálculo: (resultado atingido / meta) * peso.
+                     
+            **Frequência de atualização:**
+                     
+            Dados provenientes do Looker são recarregados quinzenalmente. São eles:
+
+                - SLA, Produtividade, Ocorrências de +2HE, Ocorrências de -11Hs Interjornadas, OPAV, Produtividade Média, SLA, Inventário, Loss Rate.
+                
+            Dados provenientes de planilhas Google são recarregados diariamente. São eles: 
+
+                - Programa 5S, Auditoria, Auto avaliação, Aderência ao Plano de Capacitação da Qualidade definido para a Base. 
+
+            Exceções: 
+
+                    - Absenteísmo: Todo dia 15 do mês (fonte Looker).
+                 - Custo / pacote: Todo dia 18 do mês (fonte planilhas Google).   
+                    """)    
 
 class GerarTabelas:
     """
@@ -110,26 +126,6 @@ class GerarTabelas:
         df = pd.DataFrame(data[1:], columns=data[0])
 
         return df
-
-
-def filter_by_multiselect(df1, df2, column, label):
-    """
-    Function to filter two dataframes based on the selected values from a Streamlit multiselect widget.
-
-    Args:
-        df1 (DataFrame): The first dataframe to filter.
-        df2 (DataFrame): The second dataframe to filter.
-        column (str): The column name to use for the multiselect widget and to filter the dataframes.
-        label (str): The label to display above the multiselect widget.
-
-    Returns:
-        DataFrame, DataFrame: The filtered dataframes.
-    """
-    selected_values = st.sidebar.multiselect(label, df1[column].unique(), key=label)
-    if selected_values:
-        df1 = df1[df1[column].isin(selected_values)]
-        df2 = df2[df2[column].isin(selected_values)]
-    return df1, df2
 
 
 class FormatoNumeros:
