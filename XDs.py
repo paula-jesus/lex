@@ -12,10 +12,10 @@ text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
 loading_message.progress(0, text=text)
 
-tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data('Crossdocking', 'XD', 'xxds')
+centered_table, tabela_detalhamento, dados_compilados_xd, dados_lex_gauge, dados_metas_planilha_xd = process_data('Crossdocking', 'XD')
 loading_message.progress(30, text=text)
 
-Dataframes.gerar_tabela_final(tabela_com_pesos_styled, pivot_table_reset)
+Dataframes.gerar_tabela_final(centered_table, tabela_detalhamento)
 
 estilizador = EstilizarPagina()
 estilizador.display_infos()

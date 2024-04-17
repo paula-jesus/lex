@@ -13,7 +13,7 @@ text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
 loading_message.progress(0, text=text)
 
-centered_table, tabela_detalhamento, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data('Agência', 'Ag', 'xag')
+centered_table, tabela_detalhamento, dados_compilados, dados_lex_gauge, dados_metas_planilha = process_data('Agência', 'Ag')
 loading_message.progress(30, text=text)
 
 Dataframes.gerar_tabela_final(centered_table, tabela_detalhamento)
