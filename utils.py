@@ -92,7 +92,7 @@ class GerarTabelas:
         return _self.leitor.read_sql("SQL", f"{filename}.sql")
 
 
-    st.cache_data(show_spinner=False, ttl=840000)
+    @st.cache_data(show_spinner=False, ttl=30)
     def gerar_tabela_sheets(worksheet):
         """
         Function to fetch data from a specific Google Sheets document and return it as a pandas DataFrame.
