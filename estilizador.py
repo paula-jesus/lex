@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd 
+from io import BytesIO
 
 
 class PageStyler:
@@ -136,7 +137,7 @@ class Dataframes:
         """.format(rendered_table)
         return html
 
-    def ajustar_pivotar(df):
+    def ajustar_pivotar(df, key=None):
         """
         Filters the DataFrame for the last month and pivots it.
 
@@ -146,8 +147,8 @@ class Dataframes:
         Returns:
             DataFrame: The filtered and pivoted DataFrame.
         """
-        last_month = pd.to_datetime('now').to_period('M') - 1
-        df = df[df['month'] == last_month]
+        if key != 'comparar_bases':
+            df = df[df['month'] == df['month'].max()]
         return df.pivot_table(columns='month', aggfunc='median')
     
     def rename_and_move_to_end(df, df2, new_column_name):
@@ -193,20 +194,40 @@ class Dataframes:
         return df
 
     def gerar_tabela_final(df1, df2):
+        df1_html = Dataframes.generate_html(df1)
+        df2_html = Dataframes.generate_html(df2)
         on = st.toggle('Visualizar detalhamento dos resultados')
         if on:
             st.write("  ")
             st.write("  ")
-            st.write(df1, unsafe_allow_html=True)
+            st.write(df1_html, unsafe_allow_html=True)
             st.write("  ")
+            st.download_button(
+                label="Baixar tabela",
+                data=df1.to_csv().encode('utf-8'),
+                file_name='Resultados_BSC.csv',
+                mime='csv',
+            )
             st.divider()
             st.subheader('Detalhamento dos resultados')
-            st.write(df2, unsafe_allow_html=True)
+            st.write(df2_html, unsafe_allow_html=True)
             st.write("  ")
+            st.download_button(
+                label="Baixar tabela",
+                data=df2.to_csv().encode('utf-8'),
+                file_name='Detalhamento_BSC.csv',
+                mime='csv',
+            )
             st.write("  ")
         else:
             st.write("  ")
             st.write("  ")
-            st.write(df1, unsafe_allow_html=True)
+            st.write(df1_html, unsafe_allow_html=True)
             st.write("  ")
+            st.download_button(
+                label="Baixar tabela",
+                data=df1.to_csv().encode('utf-8'),
+                file_name='Detalhamento_BSC.csv',
+                mime='csv',
+            )
             st.write("  ")
