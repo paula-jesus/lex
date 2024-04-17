@@ -11,7 +11,7 @@ def trat_graficos(type_abrev):
     elif type_abrev == 'XD':
         type = 'Crossdocking'
     
-    centered_table, tabela_detalhamento, dados_compilados, dados_lex_gauge, dados_metas_planilha = process_data(type, type_abrev, key="trat")
+    centered_table, tabela_detalhamento, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data(type, type_abrev)
 
     dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
     dados_compilados.set_index('Mês', inplace=True)
@@ -62,8 +62,8 @@ def trat_graficos(type_abrev):
                 column_name = PROGRAMA5S
                 dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
                 meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-                col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, PROGRAMA5S, f"Meta: {meta_value_percent}%", meta_value_decimal*10, meta_value_decimal*10))
-                col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, PROGRAMA5S, meta_value_decimal*10, 'green', 'red', 0, 100, [meta_value_decimal*10, 100], [0, meta_value_decimal*10]))
+                col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, PROGRAMA5S, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+                col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, PROGRAMA5S, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal*10]))
 
         col1, col2 = st.columns([1.1, 1])
         column_name = INVENTARIO
