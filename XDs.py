@@ -14,7 +14,6 @@ loading_message.progress(0, text=text)
 
 tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data('Crossdocking', 'XD', 'xxds')
 loading_message.progress(30, text=text)
-st.write(dados_compilados)
 
 Dataframes.gerar_tabela_final(tabela_com_pesos_styled, pivot_table_reset)
 
