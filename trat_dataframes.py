@@ -45,7 +45,7 @@ def process_data(type, type_abrev, key=None):
     dados_metas_planilha[[PROGRAMA5S_PERCENT]] = dados_metas_planilha[[PROGRAMA5S_PERCENT]] * 100
     dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO_AG, CUSTOAG, INVENTARIO_XD, CUSTOXD, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA_PERCENT, LOSS, PROGRAMA5S_PERCENT]] = dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO_AG, CUSTOAG, INVENTARIO_XD, CUSTOXD, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA_PERCENT, LOSS, PROGRAMA5S_PERCENT]] * 100
 
-    if key is None:
+    if key == 'xxds' or key == 'xag':
         selected_values = st.sidebar.multiselect("Routing Code", dados_compilados['routing_code'].unique(), key=key)
         if selected_values:
             dados_compilados = dados_compilados[dados_compilados['routing_code'].isin(selected_values)]
