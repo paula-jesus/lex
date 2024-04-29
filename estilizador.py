@@ -196,6 +196,7 @@ class Dataframes:
     def gerar_tabela_final(df1, df2):
         df1_html = Dataframes.generate_html(df1)
         df2_html = Dataframes.generate_html(df2)
+        df1 = df1.data
         on = st.toggle('Visualizar detalhamento dos resultados')
         if on:
             st.write("  ")
