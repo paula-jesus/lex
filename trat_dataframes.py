@@ -138,6 +138,8 @@ def process_data(type, type_abrev, key=None):
 
     tabela_com_pesos_styled = PesoAtingimento.process(dados_mergeados_meta, row_names)
 
+    tabela_com_pesos_styled = tabela_com_pesos_styled.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
+
     return tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo
 
 def comparativo(type_abrev):
@@ -163,12 +165,15 @@ def comparativo(type_abrev):
         detalhamento_comparativo_transformado = detalhamento_comparativo.transpose()
         detalhamento_comparativo_transformado.reset_index(inplace=True)
 
+        comparativo_pesos_styled = comparativo_pesos.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
+        comparativo_pesos_styled.hide_columns(['Peso'])
+
         comparativo_pesos_transformado['Atingimento Total'] = comparativo_pesos_transformado['Atingimento Total'].str.replace('%', '').astype(float)
 
         detalhamento_comparativo_transformado[LR] = detalhamento_comparativo_transformado[LR].apply(lambda x: re.sub('\s*R\$ \s*', '', x)).astype(float)
         detalhamento_comparativo_transformado[CUSTO] = detalhamento_comparativo_transformado[CUSTO].apply(lambda x: re.sub('\s*R\$ \s*', '', x))
 
-        comparativo_pesos_html = Dataframes.generate_html(comparativo_pesos)
+        comparativo_pesos_html = Dataframes.generate_html(comparativo_pesos_styled)
         st.subheader('Atingimeto com pesos')
         st.write(comparativo_pesos_html, unsafe_allow_html=True)
         comparativo_pesos = comparativo_pesos.to_csv().encode('utf-8')

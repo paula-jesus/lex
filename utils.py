@@ -73,7 +73,7 @@ class GerarTabelas:
     This class is responsible for generating tables by reading SQL files.
 
     Args:
-        _self (object): Instance of the class. Self with undercore is used to cache the data and avoid conflicts with streamlit. More informations about it here: https://discuss.streamlit.io/t/from-st-cache-to-st-cache-data-in-a-class/37667
+        _self (object): Instance of the class. Self with undercore is used to cache the data and avoid conflicts with streamlit. More inions about it here: https://discuss.streamlit.io/t/from-st-cache-to-st-cache-data-in-a-class/37667
     """
     def __init__(_self):
         _self.leitor = DataReader()
@@ -219,9 +219,9 @@ class PesoAtingimento:
         peso = row['Peso']
         row_name = row.name
         if row_name in row_names:
-            return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row.iloc[:-2]] + list(row.iloc[-2:]), index=row.index)
         else:
-            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row], index=row.index)
+            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row.iloc[:-2]] + list(row.iloc[-2:]), index=row.index)
 
     @staticmethod
     def process(df, row_names):
@@ -237,14 +237,45 @@ class PesoAtingimento:
         """
         df['Meta'] = pd.to_numeric(df['Meta'], errors='coerce')
         df['Peso'] = pd.to_numeric(df['Peso'], errors='coerce')
-
         df.dropna(subset=['Meta'], inplace=True)
         df = df.apply(lambda row: PesoAtingimento.atingimento_com_peso(row, row_names), axis=1)
         df = df.fillna(0)
         totals = df.sum()
         df.loc['Atingimento Total'] = totals
-        df = df.drop(['Meta', 'Peso'], axis=1)
+        df = df.drop(['Meta'], axis=1)
         df = df.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.2f}%')
         return df
-
-
+    
+    def color_achievement(row, type):
+        peso = row[type].replace('%', '')
+        peso = peso.replace('R$ ', '')
+        peso = float(peso)
+        colors = []
+        for i, val in enumerate(row):
+            # Skip the last column
+            if i == len(row) - 1:
+                colors.append('')  # No color for the last column
+                continue
+            try:
+                val = val.replace('%', '')
+                val = val.replace('R$ ', '')
+                val = val.replace(' ', '')
+                val = float(val)
+                if type == 'Peso': 
+                    if val < 0.25 * peso:
+                        colors.append('background-color: #f4c6c9')  # light red
+                    elif val < 0.5 * peso:
+                        colors.append('background-color: #fae1b9')  # light orange
+                    elif val < 0.85 * peso:
+                        colors.append('background-color: #f6edbd')  # light yellow
+                    elif val < peso:
+                        colors.append('background-color: #d9e8c3')  # light green
+                    elif val >= peso:
+                        colors.append('background-color: #8be0b8')
+                    else:
+                        colors.append('background-color: #7f8773')
+                else:
+                    colors.append('background-color: #FFFFFF')  # default color if val can't be converted to float
+            except ValueError:
+                colors.append('background-color: #FFFFFF')  # default color if val can't be converted to float
+        return colors
