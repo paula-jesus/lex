@@ -4,8 +4,6 @@ from consts import *
 from estilizador import Dataframes
 from functools import reduce
 import streamlit as st
-import plotly.express as px
-import re
 
 last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 tabela = GerarTabelas()
@@ -52,16 +50,11 @@ def process_data(type, type_abrev, key=None):
             dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['routing_code'].isin(selected_values)]
 
     if key == 'comparar_bases_ag' or key == 'comparar_bases_xd':
-        month = st.selectbox('Mês', dados_compilados['month'].unique(), placeholder='Selecione um mês', key=key)
-        routing_code = st.multiselect('Routing Code', dados_compilados['routing_code'].unique())
+        routing_code = st.multiselect('Routing Code', dados_compilados['routing_code'].unique(), placeholder='Selecione um ou mais routing codes', key=key)
         if routing_code:
             dados_compilados = dados_compilados[dados_compilados['routing_code'].isin(routing_code)]
             dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['routing_code'].isin(routing_code)]
             dados_pesos = dados_pesos[dados_pesos['routing_code'].isin(routing_code)]
-        if month:
-            dados_compilados = dados_compilados[dados_compilados['month'] == month]
-            dados_metas_planilha = dados_metas_planilha[dados_metas_planilha['month'] == month]
-            dados_pesos = dados_pesos[dados_pesos['month'] == month]
 
     if type_abrev == 'XD':
         dados_compilados = dados_compilados.drop(['sla'], axis=1, errors='ignore')
@@ -134,83 +127,12 @@ def process_data(type, type_abrev, key=None):
     detalhamento_comparativo = FormatoNumeros.format_rows(detalhamento_comparativo, row_labels, FormatoNumeros.format_func)
     detalhamento_comparativo = FormatoNumeros.format_rows(detalhamento_comparativo, row_labels_finance, FormatoNumeros.format_func_finance)
 
+    pivot_table_reset = pivot_table_reset.drop(columns='Peso')
+
     comparativo_pesos = PesoAtingimento.process(comparativo_pesos, row_names)
 
     tabela_com_pesos_styled = PesoAtingimento.process(dados_mergeados_meta, row_names)
 
     tabela_com_pesos_styled = tabela_com_pesos_styled.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
 
-    return tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo
-
-def comparativo(type_abrev):
-
-    if type_abrev == 'Ag':
-        type = 'Agência'
-        key = 'comparar_bases_ag'
-    elif type_abrev == 'XD':
-        type = 'Crossdocking'
-        key = 'comparar_bases_xd'
-    
-    centered_table, tabela_detalhamento, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data(type, type_abrev, key)
-
-    botao = st.button('Comparar bases', key=(key + 'botao'))
-    if botao:
-        dados_metas_planilha_pivot = dados_metas_planilha.pivot_table(columns='routing_code', aggfunc='median')
-        dados_metas_planilha_pivot = dados_metas_planilha_pivot.reset_index(inplace=True)
-
-        comparativo_pesos_transformado = comparativo_pesos.transpose()
-        comparativo_pesos_transformado.reset_index(inplace=True)
-        detalhamento_comparativo.drop(columns='Peso', inplace=True)
-        detalhamento_comparativo.drop(columns='Meta', inplace=True)
-        detalhamento_comparativo_transformado = detalhamento_comparativo.transpose()
-        detalhamento_comparativo_transformado.reset_index(inplace=True)
-
-        comparativo_pesos_styled = comparativo_pesos.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
-        comparativo_pesos_styled.hide_columns(['Peso'])
-
-        comparativo_pesos_transformado['Atingimento Total'] = comparativo_pesos_transformado['Atingimento Total'].str.replace('%', '').astype(float)
-
-        detalhamento_comparativo_transformado[LR] = detalhamento_comparativo_transformado[LR].apply(lambda x: re.sub('\s*R\$ \s*', '', x)).astype(float)
-        detalhamento_comparativo_transformado[CUSTO] = detalhamento_comparativo_transformado[CUSTO].apply(lambda x: re.sub('\s*R\$ \s*', '', x))
-
-        comparativo_pesos_html = Dataframes.generate_html(comparativo_pesos_styled)
-        st.subheader('Atingimeto com pesos')
-        st.write(comparativo_pesos_html, unsafe_allow_html=True)
-        comparativo_pesos = comparativo_pesos.to_csv().encode('utf-8')
-        st.download_button(label='Download', data= comparativo_pesos, file_name='Resultados_BSC.csv', key=(key + 'download'), mime='csv')
-        st.divider()
-        st.subheader('Detalhamento dos resultados')
-        detalhamento_comparativo_html = Dataframes.generate_html(detalhamento_comparativo)
-        st.write(detalhamento_comparativo_html, unsafe_allow_html=True)
-        detalhamento_comparativo = detalhamento_comparativo.to_csv().encode('utf-8')
-        st.download_button(label='Download', data= detalhamento_comparativo, file_name='Detalhamento_BSC.csv', key=(key + 'download2'), mime='csv')
-        st.divider()
-
-        comparativo_pesos_transformado = comparativo_pesos_transformado.sort_values(by='Atingimento Total', ascending=False)
-        fig = px.line(comparativo_pesos_transformado, x='index', y='Atingimento Total', title='Atingimento Total', labels={'index': 'Routing Code', 'Atingimento Total': 'Atingimento Total'}, range_y=[0,100])
-        fig.update_traces(mode='markers+lines')
-        st.plotly_chart(fig)
-
-        # Melt the DataFrame
-        pessoas = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=['Absenteísmo', ADERENCIA, O2HE, O11INTER])
-        fig = px.bar(pessoas, barmode='group', x='variable', y='value', color='index', title='Pilar de Pessoas', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-        st.plotly_chart(fig)
-
-        if type_abrev == 'XD':
-            qualidade = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=[OPAV, INVENTARIO, PROGRAMA5S])
-        elif type_abrev == 'Ag':
-            qualidade = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=[OPAV, INVENTARIO, SLA])
-        fig = px.bar(qualidade, barmode='group', x='variable', y='value', color='index', title='Pilar de Qualidade', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-        st.plotly_chart(fig)
-
-        entrega = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=[PRODMEDIA])
-        fig = px.bar(entrega, barmode='group', x='variable', y='value', color='index', title='Pilar de Entrega', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-        st.plotly_chart(fig)
-
-        Financeiro = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=[CUSTO, LR])
-        fig = px.bar(Financeiro, barmode='group', x='variable', y='value', color='index', title='Pilar Financeiro', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-        st.plotly_chart(fig)
-
-        auditoria = detalhamento_comparativo_transformado.melt(id_vars='index', value_vars=[AUDITORIA, AUTOAVALIACAO])
-        fig = px.bar(auditoria, barmode='group', x='variable', y='value', color='index', title='Pilar de Auditoria', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-        st.plotly_chart(fig)
+    return tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo, dados_pesos, pesos_pivot

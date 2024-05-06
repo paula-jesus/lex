@@ -11,7 +11,7 @@ def trat_graficos(type_abrev):
     elif type_abrev == 'XD':
         type = 'Crossdocking'
     
-    centered_table, tabela_detalhamento, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo = process_data(type, type_abrev)
+    tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo, dados_pesos, pesos_pivot = process_data(type, type_abrev)
 
     dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
     dados_compilados.set_index('Mês', inplace=True)
@@ -121,7 +121,3 @@ def trat_graficos(type_abrev):
         meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
         col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, AUTOAVALIACAO, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
         col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, AUTOAVALIACAO, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal]))
-
-
-
-

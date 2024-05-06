@@ -129,7 +129,7 @@ class GerarTabelas:
 
 
 class FormatoNumeros:
-    def format_rows(df, row_labels, format_func):
+    def format_rows(df, row_labels, format_func, key=None):
         """
         Applies a formatting function to specific rows of a DataFrame.
 
@@ -154,9 +154,7 @@ class FormatoNumeros:
         Returns:
             Series: The formatted row.
         """
-        row.iloc[:-1] = row.iloc[:-1].apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) and np.isfinite(x) else x)
-        last_cell = row.iloc[-1]
-        row.iloc[-1] = f'{last_cell:.0f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) and last_cell == int(last_cell) else f'{last_cell:.2f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) else last_cell
+        row = row.apply(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (int, float)) and np.isfinite(x) else x)
         return row
 
     def format_func(row):
@@ -171,7 +169,7 @@ class FormatoNumeros:
         """
         return row.apply(lambda x: f'{x:.0f}' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'{x:.2f}' if isinstance(x, (int, float)) and np.isfinite(x) else x)
     
-    def format_func_finance(row):
+    def format_func_finance(row, key=None):
         """
         Formats a row of a DataFrame as currency values.
 
@@ -181,9 +179,7 @@ class FormatoNumeros:
         Returns:
             Series: The formatted row.
         """
-        row.iloc[:-1] = row.iloc[:-1].apply(lambda x: f'R$ {x:.0f}' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'R$ {x:.2f}' if isinstance(x, (int, float)) and np.isfinite(x) else x)
-        last_cell = row.iloc[-1]
-        row.iloc[-1] = f'{last_cell:.0f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) and last_cell == int(last_cell) else f'{last_cell:.2f}' if isinstance(last_cell, (int, float)) and np.isfinite(last_cell) else last_cell
+        row = row.apply(lambda x: f'R$ {x:.0f}' if isinstance(x, (int, float)) and np.isfinite(x) and x == int(x) else f'R$ {x:.2f}' if isinstance(x, (int, float)) and np.isfinite(x) else x)
         return row
     
     def convert_to_numeric(df, columns):
@@ -257,9 +253,9 @@ class PesoAtingimento:
                 colors.append('')  # No color for the last column
                 continue
             try:
-                val = val.replace('%', '')
-                val = val.replace('R$ ', '')
-                val = val.replace(' ', '')
+                val = str(val).replace('%', '')
+                val = str(val).replace('R$ ', '')
+                val = str(val).replace(' ', '')
                 val = float(val)
                 if type == 'Peso': 
                     if val < 0.25 * peso:

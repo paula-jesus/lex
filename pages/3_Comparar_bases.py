@@ -1,12 +1,8 @@
 import streamlit as st
 from utils import EstilizarPagina
-from trat_dataframes import process_data, comparativo
+from visao_comparativa import comparativo
 import time
-from trat_graficos import trat_graficos
-from estilizador import Dataframes
 from consts import *
-import plotly.express as px
-import pandas as pd
 
 estilizador = EstilizarPagina()
 estilizador.set_page_config()
