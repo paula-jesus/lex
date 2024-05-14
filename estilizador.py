@@ -132,7 +132,7 @@ class Dataframes:
         rendered_table = df.to_html()
         html = """
         <div style="display: flex; justify-content: center;">
-        <div style="max-height: 500px; overflow-y: auto;">
+        <div style="max-height: 650px; overflow-y: auto;">
                 {}
         """.format(rendered_table)
         return html

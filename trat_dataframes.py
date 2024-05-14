@@ -22,10 +22,10 @@ def process_data(type, type_abrev, key=None):
     dados_pesos = Dataframes.preprocess(dados_pesos, 'BASE', type_abrev)
 
     if type_abrev == 'XD':
-        columns_planilha = [AUDITORIA, AUTOAVALIACAO, PROGRAMA5S, ADERENCIA, CUSTO]
+        columns_planilha = [AUDITORIA, AUTOAVALIACAO, PROGRAMA5S, ADERENCIA, CUSTO_OLD]
 
     if type_abrev == 'Ag':
-        columns_planilha = [AUDITORIA, AUTOAVALIACAO, ADERENCIA, CUSTO]
+        columns_planilha = [AUDITORIA, AUTOAVALIACAO, ADERENCIA, CUSTO_OLD]
         
     columns_metas_pesos = [AUDITORIA, AUTOAVALIACAO, OPAV, PROGRAMA5S_PERCENT, PRODUTIVIDADE, LOSS, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO_AG, CUSTOAG, INVENTARIO_XD, CUSTOXD, HE, INTER, SLA_PERCENT]
 
@@ -59,15 +59,15 @@ def process_data(type, type_abrev, key=None):
     if type_abrev == 'XD':
         dados_compilados = dados_compilados.drop(['sla'], axis=1, errors='ignore')
 
-    dados_compilados.rename(columns={'month': 'Mês', 'opav': OPAV, 'produtividade_media': PRODMEDIA, 'loss_rate': LR,'Auto avaliacao':AUTOAVALIACAO,'sla':SLA,'backlog':'Backlog','two_hrs':O2HE,'abs':ABS,'cnt_interjornada':O11INTER, 'percent_inventoried': INVENTARIO }, inplace=True)
+    dados_compilados.rename(columns={'month': 'Mês', 'opav': OPAV, 'produtividade_media': PRODMEDIA, 'loss_rate': LR,'Auto avaliacao':AUTOAVALIACAO,'sla':SLA,'backlog':'Backlog','two_hrs':O2HE,'abs':ABS,'cnt_interjornada':O11INTER, 'percent_inventoried': INVENTARIO, ADERENCIA: TREINAMENTO, CUSTO_OLD: CUSTO}, inplace=True)
 
     if type_abrev == 'Ag':
-        dados_metas_planilha.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO}, inplace=True)
-        dados_pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO}, inplace=True)
+        dados_metas_planilha.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+        dados_pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
 
     if type_abrev == 'XD':    
-        dados_metas_planilha.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO}, inplace=True)
-        dados_pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO}, inplace=True)
+        dados_metas_planilha.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+        dados_pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
 
     dados_metas_planilha_pivot = dados_metas_planilha.copy()
 
@@ -110,14 +110,14 @@ def process_data(type, type_abrev, key=None):
     pivot_table_reset = dados_mergeados_meta.copy()
 
     if type_abrev == 'XD':
-        row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, ADERENCIA, PROGRAMA5S]
+        row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, TREINAMENTO, PROGRAMA5S]
         row_labels = [PROGRAMA5S,O2HE,O11INTER,PRODMEDIA]
 
     if type_abrev == 'Ag':
-        row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, ADERENCIA, SLA]
+        row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, TREINAMENTO, SLA]
         row_labels = [O2HE,O11INTER,PRODMEDIA]
 
-    row_labels_finance = [CUSTO, LR]
+    row_labels_finance = [LR, CUSTO]
     row_names = [O2HE,O11INTER,ABS,CUSTO,LR,OPAV]
 
     pivot_table_reset = FormatoNumeros.format_rows(pivot_table_reset, row_labels_percent, FormatoNumeros.format_func_percent)
@@ -128,6 +128,15 @@ def process_data(type, type_abrev, key=None):
     detalhamento_comparativo = FormatoNumeros.format_rows(detalhamento_comparativo, row_labels_finance, FormatoNumeros.format_func_finance)
 
     pivot_table_reset = pivot_table_reset.drop(columns='Peso')
+
+    if type_abrev == 'XD':
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento'] 
+    if type_abrev == 'Ag':
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA]
+
+    pivot_table_reset = pivot_table_reset.reindex(order)
+    dados_mergeados_meta = dados_mergeados_meta.reindex(order)
+    comparativo_pesos = comparativo_pesos.reindex(order)
 
     comparativo_pesos = PesoAtingimento.process(comparativo_pesos, row_names)
 
