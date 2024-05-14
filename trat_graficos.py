@@ -11,7 +11,8 @@ def trat_graficos(type_abrev):
     elif type_abrev == 'XD':
         type = 'Crossdocking'
     
-    tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo, dados_pesos, pesos_pivot = process_data(type, type_abrev)
+        
+    _, _, dados_compilados, dados_metas_planilha, dados_lex_gauge, _, _, _, _, _ = process_data(type, type_abrev)
 
     dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
     dados_compilados.set_index('Mês', inplace=True)
@@ -21,11 +22,11 @@ def trat_graficos(type_abrev):
     with tab1:
 
         col1, col2 = st.columns([1.1, 1])
-        column_name = ADERENCIA
+        column_name = TREINAMENTO
         dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
         meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, 'Aderência ao Plano de Capacitação da Qualidade', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, 'Aderência ao Plano de Capacitação da Qualidade', meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
+        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, TREINAMENTO, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, TREINAMENTO, meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
         col1, col2 = st.columns([1.1, 1])
         column_name = ABS
