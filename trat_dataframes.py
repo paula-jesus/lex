@@ -8,6 +8,8 @@ import streamlit as st
 last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 tabela = GerarTabelas()
 
+#cache
+# @st.cache_data(show_spinner=False, ttl=840000, experimental_allow_widgets=True)
 def process_data(type, type_abrev, key=None):
     filenames = ["opav", "produtividade", "inventario", "abs", "two_hrs", "sla", "loss"]
     dfs = [tabela.gerar_dados(filename) for filename in filenames]
@@ -132,11 +134,13 @@ def process_data(type, type_abrev, key=None):
     if type_abrev == 'XD':
         order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento'] 
     if type_abrev == 'Ag':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA]
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento']
 
     pivot_table_reset = pivot_table_reset.reindex(order)
     dados_mergeados_meta = dados_mergeados_meta.reindex(order)
     comparativo_pesos = comparativo_pesos.reindex(order)
+
+    pivot_table_reset = pivot_table_reset.iloc[:-1]
 
     comparativo_pesos = PesoAtingimento.process(comparativo_pesos, row_names)
 
