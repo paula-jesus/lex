@@ -93,6 +93,13 @@ def comparativo(type_abrev):
 
         teste = dados_compilados.copy()
 
+        if type_abrev == 'XD':
+            order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA] 
+        if type_abrev == 'Ag':
+            order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA]
+
+        dados_compilados = dados_compilados.reindex(order)    
+
         dados_compilados_styled = dados_compilados.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
 
         detalhamento = detalhamento.pivot_table(columns=[ROUTING_CODE,'Mês'], aggfunc='median')

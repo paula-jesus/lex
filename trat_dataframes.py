@@ -8,6 +8,8 @@ import streamlit as st
 last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 tabela = GerarTabelas()
 
+#cache
+# @st.cache_data(show_spinner=False, ttl=840000, experimental_allow_widgets=True)
 def process_data(type, type_abrev, key=None):
     filenames = ["opav", "produtividade", "inventario", "abs", "two_hrs", "sla", "loss"]
     dfs = [tabela.gerar_dados(filename) for filename in filenames]
@@ -130,7 +132,7 @@ def process_data(type, type_abrev, key=None):
     pivot_table_reset = pivot_table_reset.drop(columns='Peso')
 
     if type_abrev == 'XD':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento'] 
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA] 
     if type_abrev == 'Ag':
         order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA]
 
