@@ -132,15 +132,13 @@ def process_data(type, type_abrev, key=None):
     pivot_table_reset = pivot_table_reset.drop(columns='Peso')
 
     if type_abrev == 'XD':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento'] 
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA] 
     if type_abrev == 'Ag':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento']
+        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA]
 
     pivot_table_reset = pivot_table_reset.reindex(order)
     dados_mergeados_meta = dados_mergeados_meta.reindex(order)
     comparativo_pesos = comparativo_pesos.reindex(order)
-
-    pivot_table_reset = pivot_table_reset.iloc[:-1]
 
     comparativo_pesos = PesoAtingimento.process(comparativo_pesos, row_names)
 
