@@ -8,12 +8,12 @@ import streamlit as st
 last_month = pd.to_datetime('today') - pd.DateOffset(months=1)
 tabela = GerarTabelas()
 
-#cache
-# @st.cache_data(show_spinner=False, ttl=840000, experimental_allow_widgets=True)
 def process_data(type, type_abrev, key=None):
     filenames = ["opav", "produtividade", "inventario", "abs", "two_hrs", "sla", "loss"]
     dfs = [tabela.gerar_dados(filename) for filename in filenames]
     dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer', validate="many_to_many"), dfs)
+
+    dados_looker = dados_looker.fillna(0)
 
     sheet_names = ['fonte_oficial', 'peso_kpis', 'fonte_metas']
     dados_planilha, dados_pesos, dados_metas_planilha = [GerarTabelas.gerar_tabela_sheets(name) for name in sheet_names]
