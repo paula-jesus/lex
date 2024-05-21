@@ -44,7 +44,7 @@ def process_data(type, type_abrev, key=None):
     dados_metas_planilha[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, HE, INTER, AUDITORIA,AUTOAVALIACAO]] = dados_metas_planilha[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, HE, INTER, AUDITORIA,AUTOAVALIACAO]] * 100
     dados_metas_planilha[[PROGRAMA5S_PERCENT]] = dados_metas_planilha[[PROGRAMA5S_PERCENT]] * 100
     dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO_AG, CUSTOAG, INVENTARIO_XD, CUSTOXD, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA_PERCENT, LOSS, PROGRAMA5S_PERCENT]] = dados_pesos[[ OPAV, ABSENTEISMO_PERCENT, ADERENCIA, INVENTARIO_AG, CUSTOAG, INVENTARIO_XD, CUSTOXD, HE, INTER, AUDITORIA,AUTOAVALIACAO, PRODUTIVIDADE, SLA_PERCENT, LOSS, PROGRAMA5S_PERCENT]] * 100
-
+    
     if key == 'xxds' or key == 'xag':
         selected_values = st.sidebar.multiselect("Routing Code", dados_compilados['routing_code'].unique(), key=key)
         if selected_values:
@@ -63,6 +63,9 @@ def process_data(type, type_abrev, key=None):
 
     dados_compilados.rename(columns={'month': 'Mês', 'opav': OPAV, 'produtividade_media': PRODMEDIA, 'loss_rate': LR,'Auto avaliacao':AUTOAVALIACAO,'sla':SLA,'backlog':'Backlog','two_hrs':O2HE,'abs':ABS,'cnt_interjornada':O11INTER, 'percent_inventoried': INVENTARIO, ADERENCIA: TREINAMENTO, CUSTO_OLD: CUSTO}, inplace=True)
 
+    columns_to_fill = [ABS, O2HE, O11INTER]
+    dados_compilados[columns_to_fill] = dados_compilados[columns_to_fill].fillna(0)
+    
     if type_abrev == 'Ag':
         dados_metas_planilha.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
         dados_pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
