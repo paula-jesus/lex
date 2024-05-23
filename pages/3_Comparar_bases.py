@@ -11,6 +11,8 @@ text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
 loading_message.progress(0, text=text)
 
+st.info("Esse link será desativado no dia 29/05. Acesse o novo [link oficial](https://lex.platform.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
+
 loading_message.progress(30, text=text)
 
 tab1, tab2 = st.tabs(["Agências","XDs"])
