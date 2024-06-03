@@ -12,7 +12,7 @@ text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
 loading_message.progress(0, text=text)
 
-st.info("Esse link será desativado no dia 29/05. Acesse o novo [link oficial](https://lex.platform.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
+st.info("Esse link será desativado em breve. Acesse o novo [link oficial](https://lex.platform.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
 
 tabela_com_pesos_styled, pivot_table_reset, dados_compilados, dados_metas_planilha, dados_lex_gauge, dados_metas_pesos, comparativo_pesos, detalhamento_comparativo, dados_pesos, pesos_pivot = process_data('Crossdocking', 'XD', 'xxds')
 loading_message.progress(30, text=text)
