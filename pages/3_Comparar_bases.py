@@ -11,7 +11,7 @@ text = "Dados carregando... Duração entre 1 e 5 minutos ⌛"
 loading_message = st.empty()
 loading_message.progress(0, text=text)
 
-st.info("Esse link será desativado em breve. Acesse o novo [link oficial](https://lex.platform.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
+st.info("Esse link será desativado em breve. Acesse o novo [link oficial](https://lex.data.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
 
 loading_message.progress(30, text=text)
 
