@@ -19,10 +19,13 @@ with daily_people AS (
           5,
           6
       )
-      SELECT
-        routing_code,
-        month,
-        type_dc,
-        SUM(pacotes) / SUM(pessoas) AS produtividade_media
-      FROM daily_people
-      GROUP BY 1, 2, 3
+    SELECT
+      routing_code,
+      month,
+      type_dc,
+      CASE 
+        WHEN SUM(pessoas) = 0 THEN NULL
+        ELSE SUM(pacotes) / SUM(pessoas)
+      END AS produtividade_media
+    FROM daily_people
+    GROUP BY 1, 2, 3
