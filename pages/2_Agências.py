@@ -6,7 +6,6 @@ from consts import *
 import streamlit as st
 from create_dataframes_h2 import create_tables
 from utils import Ajustes_tabelas
-from IPython.display import display, HTML
 
 estilizador = Page_config()
 estilizador.set_page_config()
