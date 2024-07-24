@@ -118,6 +118,62 @@ class PageStyler:
         )    
 
 
+class Page_config:
+            """
+            This class is responsible for styling the page.
+
+            Args:
+                self (object): Instance of the class.
+            """
+            def __init__(self):
+                self.estilizador = PageStyler()
+                self.PAGE_CONFIG = {
+                    "page_title": "BSC LEX - Loggi",
+                    "page_icon": "📦",
+                    "layout": "centered",
+                }
+
+            def set_page_config(self):
+                """
+                This method sets the page configuration and applies general and sidebar CSS.
+
+                Args:
+                    _self (object): Instance of the class.
+                """
+                st.set_page_config(**self.PAGE_CONFIG)
+                self.estilizador.apply_general_css()
+                self.estilizador.apply_sidebar_css()
+                st.subheader("BSC LEX - Monitoramento Mensal 📦")
+
+            def display_infos(self): 
+                with st.expander("Saiba mais sobre o cálculo dos pesos e frequência de atualização"):
+                    st.write("""
+                    **1. Para KPIs em que quanto menor o valor, melhor (por exemplo, OPAV e Absenteísmo):**
+
+                    - Se a base alcançar um resultado menor ou igual à meta, será pontuada com o valor integral do peso.
+
+                    **2. Para KPIs em que quanto maior o valor, melhor (por exemplo, SLA e Produtividade):**
+
+                    - Se a base alcançar um valor maior que a meta, será pontuada com o valor integral do peso.
+                    - Se a base alcançar um valor menor que a meta, será pontuada de acordo com o cálculo: (resultado atingido / meta) * peso.
+                            
+                    **Frequência de atualização:**
+                            
+                    Dados provenientes do Looker são recarregados quinzenalmente. São eles:
+
+                        - SLA, Produtividade, Ocorrências de +2HE, Ocorrências de -11Hs Interjornadas, OPAV, Produtividade Média, SLA, Inventário, Loss Rate.
+                        
+                    Dados provenientes de planilhas Google são recarregados diariamente. São eles: 
+
+                        - Programa 5S, Auditoria, Auto avaliação, Aderência ao Plano de Capacitação da Qualidade definido para a Base. 
+
+                    Exceções: 
+
+                            - Absenteísmo: Todo dia 15 do mês (fonte Looker).
+                        - Custo / pacote: Todo dia 18 do mês (fonte planilhas Google).   
+                            """)  
+
+
 class Dataframes:
     def generate_html(df):
         """
