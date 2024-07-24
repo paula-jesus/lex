@@ -4,121 +4,101 @@ from consts import *
 from trat_dataframes import process_data
 from graficos import Charts
 
-def trat_graficos(type_abrev):
+def create_charts(metas, resultados, type):
 
-    if type_abrev == 'Ag':
-        type = 'Agência'
-    elif type_abrev == 'XD':
-        type = 'Crossdocking'
-    
-        
-    _, _, dados_compilados, dados_metas_planilha, dados_lex_gauge, _, _, _, _, _ = process_data(type, type_abrev)
-
-    dados_compilados['Mês'] = pd.to_datetime(dados_compilados['Mês'])
-    dados_compilados.set_index('Mês', inplace=True)
-
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Pessoas","Qualidade","Entrega", "Financeiro", "Auditoria"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(['Pessoas', 'Qualidade', 'Entrega', 'Financeiro', 'Auditoria'])
 
     with tab1:
 
         col1, col2 = st.columns([1.1, 1])
-        column_name = TREINAMENTO
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, TREINAMENTO, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, TREINAMENTO, meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
+        column_name = 'Absenteísmo'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Absenteísmo', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Absenteísmo', meta_value_decimal, 'red', 'green', 0, 10, [0, meta_value_decimal], [meta_value_decimal, 10]))
 
-        col1, col2 = st.columns([1.1, 1])
-        column_name = ABS
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, ABS, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, ABS, meta_value_decimal, 'red', 'green', 0, 10, [0, meta_value_decimal], [meta_value_decimal, 10]))
+        column_name = 'Participação em Treinamentos [Loggers]'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Participação em Treinamentos [Loggers]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Participação em Treinamentos [Loggers]', meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
-        col1, col2 = st.columns([1.1, 1])
-        column_name = O2HE
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, O2HE, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, O2HE, meta_value_decimal, 'red', 'green', 0, 100, [0, 0], [0, 100]))
+        column_name = 'Participação em Treinamentos [Líderes]'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Participação em Treinamentos [Líderes]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Participação em Treinamentos [Líderes]', meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
-        col1, col2 = st.columns([1.1, 1])
-        column_name = O11INTER
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, O11INTER, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, O11INTER, meta_value_decimal, 'red', 'green', 0, 100, [0, 0], [0, 100]))
+        column_name = 'Aprovação em Treinamentos [Loggers]'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Aprovação em Treinamentos [Loggers]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Aprovação em Treinamentos [Loggers]', meta_value_decimal, 'green', 'red', 0, 100, [80, 100], [0, 80]))
+
+        column_name = 'Aprovação em Treinamentos [Líderes]'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Aprovação em Treinamentos [Líderes]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Aprovação em Treinamentos [Líderes]', meta_value_decimal, 'green', 'red', 0, 100, [80, 100], [0, 80]))
 
     with tab2:
 
         col1, col2 = st.columns([1.1, 1])
-        column_name  = OPAV
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, OPAV, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, OPAV, meta_value_decimal, 'red', 'green', 0, 100, [0, meta_value_decimal], [meta_value_decimal, 100]))
+        column_name = 'Cumprimento das Rotinas da Qualidade'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Cumprimento das Rotinas da Qualidade', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Cumprimento das Rotinas da Qualidade', meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
-        if type_abrev == 'XD':
-                col1, col2 = st.columns([1.1, 1])
-                column_name = PROGRAMA5S
-                dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-                meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-                col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, PROGRAMA5S, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-                col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, PROGRAMA5S, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal*10]))
+        if type == 'XD':
+            column_name = 'Programa 5S  [XD]'
+            meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+            dados_area_chart, value = Charts.process_data(resultados, column_name)
+            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Programa 5S  [XD]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Programa 5S  [XD]', meta_value_decimal, 'green', 'red', 0, 100, [85, 100], [0, 85]))
 
-        col1, col2 = st.columns([1.1, 1])
-        column_name = INVENTARIO
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, INVENTARIO, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, INVENTARIO, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal]))
+            column_name = 'Conformidade [Inspeções da Qualidade]'
+            meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+            dados_area_chart, value = Charts.process_data(resultados, column_name)
+            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Confomidade [Inspeções da Qualidade]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Confomidade [Inspeções da Qualidade]', meta_value_decimal, 'green', 'red', 0, 100, [85, 100], [0, 85]))
 
     with tab3:
 
-        if type_abrev == 'Ag':    
-            col1, col2 = st.columns([1.1, 1])
-            column_name = SLA
-            dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-            meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-            col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, 'SLA', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-            col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, 'SLA', meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal]))
-
         col1, col2 = st.columns([1.1, 1])
-        column_name = PRODMEDIA
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, PRODMEDIA, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, PRODMEDIA, meta_value_decimal, 'green', 'red', 0, 1500, [meta_value_decimal, 1500], [0, meta_value_decimal]))
+        column_name = 'SLA'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'SLA', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'SLA', meta_value_decimal, 'green', 'red', 0, 100, [97, 100], [0, 97]))
 
     with tab4:
 
         col1, col2 = st.columns([1.1, 1])
+        column_name = 'OPAV'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'OPAV', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'OPAV', meta_value_decimal, 'red', 'green', 0, 100, [0, 36], [0, 100]))
 
-        column_name = LR
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, LR, f"Meta: R${meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, LR, meta_value_decimal, 'red', 'green', 0, 1, [0, meta_value_decimal], [meta_value_decimal, 1]))
+        if type == 'Ag':
+            column_name = 'IQR Carro'
+            meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+            dados_area_chart, value = Charts.process_data(resultados, column_name)
+            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'IQR Carro', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'IQR Carro', meta_value_decimal, 'green', 'red', 0, 100, [100, 100], [0, 100]))
 
-        col1, col2 = st.columns([1.1, 1])
-        column_name = CUSTO 
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, CUSTO, f"Meta: R${meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, CUSTO, meta_value_decimal, 'red', 'green', 0, 10, [0, meta_value_decimal], [meta_value_decimal, 100]))
+            column_name = 'IQR Moto'
+            meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+            dados_area_chart, value = Charts.process_data(resultados, column_name)
+            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'IQR Moto', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'IQR Moto', meta_value_decimal, 'green', 'red', 0, 100, [100, 100], [0, 100]))
 
     with tab5:
 
         col1, col2 = st.columns([1.1, 1])
-        column_name = AUDITORIA
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, AUDITORIA, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, AUDITORIA, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal]))
-
-        col1, col2 = st.columns([1.1, 1])
-        column_name = AUTOAVALIACAO
-        dados_compilados_resampled, value = Charts.process_data(dados_compilados, column_name)
-        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(dados_metas_planilha, column_name)
-        col1.plotly_chart(Charts.create_area_plot(dados_compilados_resampled, column_name, AUTOAVALIACAO, f"Meta: {meta_value_str}", meta_value_decimal, meta_value_decimal))
-        col2.plotly_chart(Charts.gauge_chart(dados_lex_gauge, column_name, AUTOAVALIACAO, meta_value_decimal, 'green', 'red', 0, 100, [meta_value_decimal, 100], [0, meta_value_decimal]))
+        column_name = 'Atingimento da Auditoria Oficial'
+        meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
+        dados_area_chart, value = Charts.process_data(resultados, column_name)
+        col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Atingimento da Auditoria Oficial', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+        col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Atingimento da Auditoria Oficial', meta_value_decimal, 'green', 'red', 0, 100, [100, 100], [0, 100]))

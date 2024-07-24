@@ -2,71 +2,17 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 
-from estilizador import PageStyler
 from leitor import DataReader
+from functools import reduce
 
 import pandas as pd
 import gspread
 import warnings
 
+
 warnings.filterwarnings('ignore')
 
-pd.set_option('display.max_columns', None)
-
-class EstilizarPagina:
-    """
-    This class is responsible for styling the page.
-
-    Args:
-        self (object): Instance of the class.
-    """
-    def __init__(self):
-        self.estilizador = PageStyler()
-        self.PAGE_CONFIG = {
-            "page_title": "BSC LEX - Loggi",
-            "page_icon": "📦",
-            "layout": "centered",
-        }
-
-    def set_page_config(self):
-        """
-        This method sets the page configuration and applies general and sidebar CSS.
-
-        Args:
-            _self (object): Instance of the class.
-        """
-        st.set_page_config(**self.PAGE_CONFIG)
-        self.estilizador.apply_general_css()
-        self.estilizador.apply_sidebar_css()
-        st.subheader("BSC LEX - Monitoramento Mensal 📦")
-
-    def display_infos(self): 
-        with st.expander("Saiba mais sobre o cálculo dos pesos e frequência de atualização"):
-            st.write("""
-            **1. Para KPIs em que quanto menor o valor, melhor (por exemplo, OPAV e Absenteísmo):**
-
-            - Se a base alcançar um resultado menor ou igual à meta, será pontuada com o valor integral do peso.
-
-            **2. Para KPIs em que quanto maior o valor, melhor (por exemplo, SLA e Produtividade):**
-
-            - Se a base alcançar um valor maior que a meta, será pontuada com o valor integral do peso.
-            - Se a base alcançar um valor menor que a meta, será pontuada de acordo com o cálculo: (resultado atingido / meta) * peso.
-                     
-            **Frequência de atualização:**
-                     
-            Dados provenientes do Looker são recarregados quinzenalmente. São eles:
-
-                - SLA, Produtividade, Ocorrências de +2HE, Ocorrências de -11Hs Interjornadas, OPAV, Produtividade Média, SLA, Inventário, Loss Rate.
-                
-            Dados provenientes de planilhas Google são recarregados diariamente. São eles: 
-
-                - Programa 5S, Auditoria, Auto avaliação, Aderência ao Plano de Capacitação da Qualidade definido para a Base. 
-
-            Exceções: 
-
-                    - Absenteísmo: Todo dia 15 do mês (fonte Looker).
-                 - Custo / pacote: Todo dia 18 do mês (fonte planilhas Google).   
-                    """)    
+pd.set_option('display.max_columns', None)  
 
 class GerarTabelas:
     """
@@ -126,6 +72,87 @@ class GerarTabelas:
         df = pd.DataFrame(data[1:], columns=data[0])
 
         return df
+    
+class Ajustes_tabelas:
+    def rename_columns_before_merge(df, suffix, exclude_cols=[]):
+        df_copy = df.copy()
+        df_copy.columns = [f"{col} {suffix}" if col not in exclude_cols else col for col in df_copy.columns]
+        return df_copy
+
+    def convert_month(dfs):
+        for df in dfs:
+            df['month'] = pd.to_datetime(df['month']).dt.to_period('M')
+        return dfs
+
+    def change_na(dfs):
+        for df in dfs:
+            df.replace("N/A", "", inplace=True)
+        return dfs
+
+    def config_columns_numeric(dfs):
+        for df in dfs:
+            colunas = ['% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Conformidade [Inspeções da Qualidade]', '% Atingimento da Auditoria Oficial', '% Programa 5S  [XD]', 'IQR Moto', 'IQR Carro']
+            for coluna in colunas:
+                if coluna in df.columns:
+                    df[coluna] = pd.to_numeric(df[coluna], errors='coerce')
+
+    def gerar_tabelas():
+        tabela = GerarTabelas()
+        filenames = ["opav", "abs", "sla", "iqr"]
+        dfs = [tabela.gerar_dados(filename) for filename in filenames]
+        dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer', validate="many_to_many"), dfs)
+
+        sheet_names = ['fonte_oficial_h2', 'peso_kpis_h2_2024', 'fonte_metas_h2_2024']
+        dados_planilha, pesos, metas = [GerarTabelas.gerar_tabela_sheets(name) for name in sheet_names]
+
+        return dados_looker, dados_planilha, pesos, metas
+
+    def ajustes_iniciais(type):
+        dados_looker, dados_planilha, pesos, metas = Ajustes_tabelas.gerar_tabelas()
+        dados_looker['routing_code'] = dados_looker['routing_code'].replace('CJ2', 'XDCJ2')
+        dados_looker = dados_looker.rename(columns={'sla': 'SLA', 'abs': '% Absenteísmo', 'opav': 'OPAV', 'iqr_moto': 'IQR Moto', 'iqr_carro': 'IQR Carro'})
+        Ajustes_tabelas.convert_month([dados_looker, dados_planilha, pesos, metas])
+        Ajustes_tabelas.change_na([dados_looker, dados_planilha, pesos, metas])
+        Ajustes_tabelas.config_columns_numeric([dados_looker, dados_planilha, pesos, metas])
+        dados_planilha = dados_planilha.drop('#', axis=1)
+
+        dados_planilha = dados_planilha[dados_planilha['BASE'] == type]
+        metas = metas[metas['BASE'] == type]
+        pesos = pesos[pesos['BASE'] == type]
+
+        if type == 'XD':
+            dados_looker = dados_looker[['routing_code', 'month', 'SLA', '% Absenteísmo', 'OPAV']]
+        if type == 'Ag':
+            dados_planilha = dados_planilha[['routing_code', 'month', '% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Atingimento da Auditoria Oficial']]
+
+        resultados = pd.merge(dados_planilha, dados_looker, on=['routing_code', 'month'], how='left')
+        resultados.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+        metas.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+        pesos.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+        resultados.columns = resultados.columns.str.replace('% ', '')
+        metas.columns = metas.columns.str.replace('% ', '')
+        pesos.columns = pesos.columns.str.replace('% ', '')
+
+        return resultados, pesos, metas
+    
+class CalcularPesos:    
+
+    def calculate_columns(resultados_com_peso_meta, columns):
+        for column in columns:
+            resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
+            resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
+            resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
+            resultados_com_peso_meta[f'{column}'] = np.minimum(resultados_com_peso_meta[f'{column} peso'], (resultados_com_peso_meta[f'{column} resultado'] / resultados_com_peso_meta[f'{column} meta']) * resultados_com_peso_meta[f'{column} peso'])
+
+    def calculate_columns_baixo_melhor(resultados_com_peso_meta, columns):
+        for column in columns:
+            resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
+            resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
+            resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
+            condition = (resultados_com_peso_meta[f'{column} resultado'] > resultados_com_peso_meta[f'{column} meta']) & (resultados_com_peso_meta[f'{column} resultado'].notna()) & (resultados_com_peso_meta[f'{column} meta'].notna())
+            resultados_com_peso_meta.loc[condition, f'{column}'] = 0
+            resultados_com_peso_meta.loc[~condition & resultados_com_peso_meta[f'{column} resultado'].notna() & resultados_com_peso_meta[f'{column} meta'].notna(), f'{column}'] = resultados_com_peso_meta[f'{column} peso']
+
 
 
 class FormatoNumeros:
@@ -243,12 +270,14 @@ class PesoAtingimento:
         return df
     
     def color_achievement(row, type):
-        peso = row[type].replace('%', '')
+        try:
+            peso = row[type].replace('%', '')
+        except (AttributeError, ValueError):
+                peso = str(row[type]).replace('%', '')
         peso = peso.replace('R$ ', '')
         peso = float(peso)
         colors = []
         for i, val in enumerate(row):
-            # Skip the last column
             if i == len(row) - 1:
                 colors.append('')  # No color for the last column
                 continue
