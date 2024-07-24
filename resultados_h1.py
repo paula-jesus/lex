@@ -134,9 +134,6 @@ def comparativo_h1(type_abrev):
 
     comparativo_pesos_transformado['Atingimento Total'] = comparativo_pesos_transformado['Atingimento Total'].str.replace('%', '').astype(float)
 
-    detalhamento_comparativo_transformado[LR] = detalhamento_comparativo_transformado[LR].apply(lambda x: re.sub('\s*R\$ \s*', '', x)).astype(float)
-    detalhamento_comparativo_transformado[CUSTO] = detalhamento_comparativo_transformado[CUSTO].apply(lambda x: re.sub('\s*R\$ \s*', '', x))
-
     comparativo_pesos_html = Dataframes.generate_html(dados_compilados_styled)
     st.subheader('Atingimeto com pesos')
     st.write(comparativo_pesos_html, unsafe_allow_html=True)
@@ -150,32 +147,10 @@ def comparativo_h1(type_abrev):
     st.download_button(label='Download', data= detalhamento_comparativo, file_name='Detalhamento_BSC.csv', key=(key + 'download2'), mime='csv')
     st.divider()
 
-    st.write('Gráficos referentes ao último mês completo')
+    st.write('Gráfico referente ao último mês completo')
 
     comparativo_pesos_transformado = comparativo_pesos_transformado.sort_values(by='Atingimento Total', ascending=False)
     fig = px.line(comparativo_pesos_transformado, x=ROUTING_CODE, y='Atingimento Total', title='Atingimento Total', labels={'index': ROUTING_CODE, 'Atingimento Total': 'Atingimento Total'}, range_y=[0,100])
     fig.update_traces(mode='markers+lines')
     st.plotly_chart(fig)
 
-    pessoas = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[ABS, TREINAMENTO, O2HE, O11INTER])
-    fig = px.bar(pessoas, barmode='group', x='variable', y='value', color=ROUTING_CODE, title='Pilar de Pessoas', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-    st.plotly_chart(fig)
-
-    if type_abrev == 'XD':
-        qualidade = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[OPAV, INVENTARIO, PROGRAMA5S])
-    elif type_abrev == 'Ag':
-        qualidade = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[OPAV, INVENTARIO, SLA])
-    fig = px.bar(qualidade, barmode='group', x='variable', y='value', color=ROUTING_CODE, title='Pilar de Qualidade', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-    st.plotly_chart(fig)
-
-    entrega = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[PRODMEDIA])
-    fig = px.bar(entrega, barmode='group', x='variable', y='value', color=ROUTING_CODE, title='Pilar de Entrega', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-    st.plotly_chart(fig)
-
-    Financeiro = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[CUSTO, LR])
-    fig = px.bar(Financeiro, barmode='group', x='variable', y='value', color=ROUTING_CODE, title='Pilar Financeiro', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-    st.plotly_chart(fig)
-
-    auditoria = detalhamento_comparativo_transformado.melt(id_vars=ROUTING_CODE, value_vars=[AUDITORIA, AUTOAVALIACAO])
-    fig = px.bar(auditoria, barmode='group', x='variable', y='value', color=ROUTING_CODE, title='Pilar de Auditoria', labels={'variable': 'Indicador', 'value': 'Atingimento'})
-    st.plotly_chart(fig)
