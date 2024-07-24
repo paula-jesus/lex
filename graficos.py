@@ -113,6 +113,8 @@ class Charts:
         """
         plot = px.area(df, x="Mês", y=y_column, title=title, height=330, width=500, color_discrete_sequence=['#00baff'])
 
+        plot.add_trace(go.Scatter(x=df["Mês"], y=df[y_column], mode='markers', marker=dict(color='#00baff'), hoverinfo='y'))
+
         goal_line = go.layout.Shape(
             type="line",
             x0=df["Mês"].min(),
@@ -142,3 +144,4 @@ class Charts:
         plot.update_layout(shapes=[goal_line], showlegend=False, yaxis_title=None)
 
         return plot
+    

@@ -34,18 +34,18 @@ def create_tables(type, visao=None, key=None):
     resultados_com_peso_meta = pd.merge(resultados_com_peso_meta, pesos_nomeado, on=[ROUTING_CODE, MES], how='left')
 
     if type == 'XD':
-        columns = ['SLA','Participação em Treinamentos [Loggers]', 'Participação em Treinamentos [Líderes]', 'Aprovação em Treinamentos [Loggers]', 'Aprovação em Treinamentos [Líderes]', 'Cumprimento das Rotinas da Qualidade', 'Atingimento da Auditoria Oficial', 'Programa 5S  [XD]', 'Conformidade [Inspeções da Qualidade]']
+        columns = [SLA,PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'Programa 5S  [XD]', CONFORMIDADE]
     if type == 'Ag':
-        columns = ['SLA','Participação em Treinamentos [Loggers]', 'Participação em Treinamentos [Líderes]', 'Aprovação em Treinamentos [Loggers]', 'Aprovação em Treinamentos [Líderes]', 'Cumprimento das Rotinas da Qualidade', 'Atingimento da Auditoria Oficial', 'IQR Carro', 'IQR Moto']
+        columns = [SLA,PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'IQR Carro', 'IQR Moto']
     CalcularPesos.calculate_columns(resultados_com_peso_meta, columns)
 
-    columns = ['Absenteísmo', 'OPAV']
+    columns = [ABS, OPAV]
     CalcularPesos.calculate_columns_baixo_melhor(resultados_com_peso_meta, columns)
 
     if type == 'XD':
-        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, 'SLA', 'Absenteísmo', 'OPAV', 'Participação em Treinamentos [Loggers]', 'Participação em Treinamentos [Líderes]', 'Aprovação em Treinamentos [Loggers]', 'Aprovação em Treinamentos [Líderes]', 'Cumprimento das Rotinas da Qualidade', 'Atingimento da Auditoria Oficial', 'Programa 5S  [XD]', 'Conformidade [Inspeções da Qualidade]']]
+        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'Programa 5S  [XD]', CONFORMIDADE]]
     if type == 'Ag':
-        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, 'SLA', 'Absenteísmo', 'OPAV', 'Participação em Treinamentos [Loggers]', 'Participação em Treinamentos [Líderes]', 'Aprovação em Treinamentos [Loggers]', 'Aprovação em Treinamentos [Líderes]', 'Cumprimento das Rotinas da Qualidade', 'Atingimento da Auditoria Oficial', 'IQR Carro', 'IQR Moto']]
+        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'IQR Carro', 'IQR Moto']]
 
     grafico_comparativo = bsc.copy()
     grafico_comparativo['Atingimento Total'] = grafico_comparativo.sum(axis=1)
@@ -73,7 +73,7 @@ def create_tables(type, visao=None, key=None):
         df = df.reindex(new_order)
         return df
 
-    order = ['Absenteísmo', 'Participação em Treinamentos [Loggers]', 'Participação em Treinamentos [Líderes]', 'Aprovação em Treinamentos [Loggers]', 'Aprovação em Treinamentos [Líderes]', 'Programa 5S  [XD]', 'Cumprimento das Rotinas da Qualidade', 'Conformidade [Inspeções da Qualidade]', 'SLA', 'OPAV', 'Atingimento da Auditoria Oficial', 'Atingimento Total']
+    order = [ABS, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, 'Programa 5S  [XD]', CUMPR_ROT_QUALIDADE, CONFORMIDADE, SLA, OPAV, ATING_AUDITORIA, 'Atingimento Total']
 
     bsc_geral = reorder_dataframe(bsc_geral, order)
     bsc_comparativo = reorder_dataframe(bsc_comparativo, order)
