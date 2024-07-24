@@ -46,8 +46,6 @@ def comparativo_h1(type_abrev):
             AUDITORIA, AUTOAVALIACAO, CUSTO, LR, 
             O2HE, O11INTER, PROGRAMA5S]
 
-
-    st.write(dados_compilados)
     for col in columns:
         dados_compilados[col] = dados_compilados[f'{col}_x'] / dados_compilados[f'{col}_y']  
 
