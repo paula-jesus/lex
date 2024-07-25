@@ -1,156 +1,111 @@
-import pandas as pd
-from utils import FormatoNumeros, PesoAtingimento
-from consts import *
-from estilizador import Dataframes
 import streamlit as st
-import plotly.express as px
-import re
+import pandas as pd
+from utils import color_achievement, FormatoNumeros
+from estilizador import Dataframes
+from init_dataframes import Ajustes_tabelas, CalcularPesos, Gerar_mergear_tabelas
+from consts import *
+import streamlit as st
 import numpy as np
-from trat_dataframes import process_data
 
-@st.cache_data(show_spinner=False, ttl=10000000, experimental_allow_widgets=True)
-def comparativo_h1(type_abrev):
+def tabelas_resultados_h1(type, key=None):
 
-    if type_abrev == 'Ag':
-        type = 'Agência'
-        key = 'comparar_bases_ag'
-    elif type_abrev == 'XD':
-        type = 'Crossdocking'
-        key = 'comparar_bases_xd'
-    
-    _, _, dados_compilados, dados_metas_planilha, _, _, _, detalhamento_comparativo, dados_pesos, pesos_pivot = process_data(type, type_abrev, key)
+    resultados, pesos, metas = Gerar_mergear_tabelas.dfs_mergeados(type, 'H1')
 
-    dados_compilados = dados_compilados[dados_compilados['Mês'] <= '2024-06']
+    resultados.fillna(0, inplace=True)
 
-    month = st.multiselect('Mês', dados_compilados['Mês'].unique(), placeholder='Selecione um ou mais meses')
+    resultados = resultados[resultados['Mês'] <= '2024-06']
+    resultados = resultados[resultados['Mês'] >= '2024-01']
+    pesos = pesos[pesos['Mês'] <= '2024-06']
+    pesos = pesos[pesos['Mês'] >= '2024-01']
+
+    if type == 'XD':
+        resultados.drop(columns=['sla'], inplace=True)
+    if type == 'Ag':
+        resultados.drop(columns=[PROGRAMA5S], inplace=True)
+
+    month = st.multiselect('Selecione o mês', resultados[MES].unique(), key=key)
+    routing_code = st.multiselect('Selecione o routing code', resultados[ROUTING_CODE].unique())
     if month:
-        dados_compilados = dados_compilados[dados_compilados['Mês'].isin(month)]
+        resultados = resultados[resultados[MES].isin(month)]
+    if routing_code:
+        resultados = resultados[resultados[ROUTING_CODE].isin(routing_code)]
 
-    dados_metas_planilha.rename(columns={'month': 'Mês', 'routing_code': ROUTING_CODE}, inplace=True)
-    dados_compilados.rename(columns={'routing_code': ROUTING_CODE}, inplace=True)
-    dados_pesos.rename(columns={'routing_code': ROUTING_CODE}, inplace=True)
-    dados_metas_planilha['Mês'] = dados_metas_planilha['Mês'].dt.to_timestamp().dt.strftime('%Y-%m')
+    resultados.rename(columns={'month': 'Mês', 'opav': OPAV, 'produtividade_media': PRODMEDIA, 'loss_rate': LR,'Auto avaliacao':AUTOAVALIACAO,'sla':SLA,'backlog':'Backlog','two_hrs':O2HE,'abs':ABS,'cnt_interjornada':O11INTER, 'percent_inventoried': INVENTARIO, ADERENCIA: TREINAMENTO, CUSTO_OLD: CUSTO}, inplace=True)
+    if type == 'Ag':
+            metas.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+            pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, SLA_PERCENT: SLA, INVENTARIO_AG: INVENTARIO, LOSS: LR, CUSTOAG: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+            order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento Total']
+            columns_mais_melhor = [SLA, PRODMEDIA, INVENTARIO, TREINAMENTO, AUTOAVALIACAO, AUDITORIA]
 
-    detalhamento = dados_compilados.copy()
+    if type == 'XD':    
+            metas.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+            pesos.rename(columns={ABSENTEISMO_PERCENT: ABS,HE: O2HE, INTER:O11INTER, PRODUTIVIDADE:PRODMEDIA, PROGRAMA5S_PERCENT: PROGRAMA5S, INVENTARIO_XD: INVENTARIO, LOSS: LR, CUSTOXD: CUSTO, ADERENCIA: TREINAMENTO}, inplace=True)
+            order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento Total'] 
+            columns_mais_melhor =  [PRODMEDIA, PROGRAMA5S, INVENTARIO, TREINAMENTO, AUTOAVALIACAO, AUDITORIA]
+            resultados[[PROGRAMA5S]] = resultados[[PROGRAMA5S]].applymap(lambda x: x * 10 if isinstance(x, (int, float)) else x)
 
-    dados_compilados = pd.merge(dados_compilados, dados_metas_planilha, on=[ROUTING_CODE, 'Mês'], how='inner', validate="many_to_many")
+    resultados['KPI'] = resultados[MES]
+    resultados[[ABS, OPAV, AUDITORIA, AUTOAVALIACAO, TREINAMENTO]] = resultados[[ABS, OPAV, AUDITORIA, AUTOAVALIACAO, TREINAMENTO]].applymap(lambda x: x * 100 if isinstance(x, (int, float)) else x)
+    resultados_comparativo = resultados.pivot_table(columns=[ROUTING_CODE,MES], aggfunc='median')
 
-    if type_abrev == 'Ag': 
-        columns = [OPAV, PRODMEDIA, INVENTARIO, ABS, 
-            TREINAMENTO, 
-            AUDITORIA, AUTOAVALIACAO, CUSTO, LR, SLA, 
-            O2HE, O11INTER]
-    if type_abrev == 'XD':
-        columns = [OPAV, PRODMEDIA, INVENTARIO, ABS, 
-            TREINAMENTO, 
-            AUDITORIA, AUTOAVALIACAO, CUSTO, LR, 
-            O2HE, O11INTER, PROGRAMA5S]
+    pesos_nomeado = Ajustes_tabelas.rename_columns_before_merge(pesos, 'peso', [ROUTING_CODE, MES])
+    metas_nomeado = Ajustes_tabelas.rename_columns_before_merge(metas, 'meta', [ROUTING_CODE, MES])
+    resultados_nomeado = Ajustes_tabelas.rename_columns_before_merge(resultados, 'resultado', [ROUTING_CODE, MES])
 
-    for col in columns:
-        dados_compilados[col] = dados_compilados[f'{col}_x'] / dados_compilados[f'{col}_y']  
+    resultados_com_peso_meta = pd.merge(resultados_nomeado, metas_nomeado, on=[ROUTING_CODE, MES], how='left')
+    resultados_com_peso_meta = pd.merge(resultados_com_peso_meta, pesos_nomeado, on=[ROUTING_CODE, MES], how='left')
 
-    if type_abrev == 'Ag':
-        dados_compilados = dados_compilados.drop(['OPAV_x', 'OPAV_y', 'Produtividade Média_x', 'Produtividade Média_y', 'Inventário_x', 'Inventário_y', 'Absenteísmo_x', 'Absenteísmo_y', 'Treinamentos_x', 'Treinamentos_y', 'Auditoria_x', 'Auditoria_y', 'Auto avaliação_x', 'Auto avaliação_y', 'Custo por Pacote_x', 'Custo por Pacote_y', 'Loss Rate_x', 'Loss Rate_y', 'SLA_x', 'SLA_y', 'Ocorrências de +2HE_x', 'Ocorrências de +2HE_y', 'Ocorrências de Interjornadas_x', 'Ocorrências de Interjornadas_y'], axis=1)
+    columns_menos_melhor = [ABS, OPAV, LR, CUSTO, O2HE, O11INTER]
+    CalcularPesos.calculate_columns(resultados_com_peso_meta, columns_mais_melhor)
+    CalcularPesos.calculate_columns_baixo_melhor(resultados_com_peso_meta, columns_menos_melhor)
 
-    if type_abrev == 'XD':
-        dados_compilados = dados_compilados.drop(['OPAV_x', 'OPAV_y', 'Produtividade Média_x', 'Produtividade Média_y', 'Inventário_x', 'Inventário_y', 'Absenteísmo_x', 'Absenteísmo_y', 'Treinamentos_x', 'Treinamentos_y', 'Auditoria_x', 'Auditoria_y', 'Auto avaliação_x', 'Auto avaliação_y', 'Custo por Pacote_x', 'Custo por Pacote_y', 'Loss Rate_x', 'Loss Rate_y', 'Ocorrências de +2HE_x', 'Ocorrências de +2HE_y', 'Ocorrências de Interjornadas_x', 'Ocorrências de Interjornadas_y', 'Programa 5S_x', 'Programa 5S_y'], axis=1)    
+    if type == 'XD':
+        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, ABS, OPAV, PRODMEDIA, PROGRAMA5S, INVENTARIO, LR, CUSTO, TREINAMENTO, O2HE, O11INTER, AUTOAVALIACAO, AUDITORIA]]
+    if type == 'Ag':
+        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PRODMEDIA, INVENTARIO, LR, CUSTO, TREINAMENTO, O2HE, O11INTER, AUTOAVALIACAO, AUDITORIA]]
 
-    dados_compilados = pd.merge(dados_compilados, dados_pesos, on=[ROUTING_CODE], how='inner', validate="many_to_many")
+    grafico_comparativo = bsc.copy()
+    grafico_comparativo['Atingimento Total'] = grafico_comparativo.sum(axis=1)
 
-    dados_compilados[OPAV] = np.where(dados_compilados['OPAV_x'] > 1, 0, dados_compilados['OPAV_y'])
-    dados_compilados[O11INTER] = np.where(dados_compilados['Ocorrências de Interjornadas_x'] > 1, 0, dados_compilados['Ocorrências de Interjornadas_y'])
-    dados_compilados[ABS] = np.where(dados_compilados['Absenteísmo_x'] > 1, 0, dados_compilados['Absenteísmo_y'])
-    dados_compilados[CUSTO] = np.where(dados_compilados['Custo por Pacote_x'] > 1, 0, dados_compilados['Custo por Pacote_y'])
-    dados_compilados[LR] = np.where(dados_compilados['Loss Rate_x'] > 1, 0, dados_compilados['Loss Rate_y'])
-    dados_compilados[O2HE] = np.where(dados_compilados['Ocorrências de +2HE_x'] > 1, 0, dados_compilados['Ocorrências de +2HE_y'])
-    dados_compilados[TREINAMENTO] = np.where(dados_compilados['Treinamentos_x'] > 1, dados_compilados['Treinamentos_y'], dados_compilados['Treinamentos_x'] * dados_compilados['Treinamentos_y'])
-    dados_compilados[AUDITORIA] = np.where(dados_compilados['Auditoria_x'] > 1, dados_compilados['Auditoria_y'], dados_compilados['Auditoria_x'] * dados_compilados['Auditoria_y'])
-    dados_compilados[AUTOAVALIACAO] = np.where(dados_compilados['Auto avaliação_x'] > 1, dados_compilados['Auto avaliação_y'], dados_compilados['Auto avaliação_x'] * dados_compilados['Auto avaliação_y'])
-    dados_compilados[INVENTARIO] = np.where(dados_compilados['Inventário_x'] > 1, dados_compilados['Inventário_y'], dados_compilados['Inventário_x'] * dados_compilados['Inventário_y'])
-    dados_compilados[PRODMEDIA] = np.where(dados_compilados['Produtividade Média_x'] > 1, dados_compilados['Produtividade Média_y'], dados_compilados['Produtividade Média_x'] * dados_compilados['Produtividade Média_y'])
-    if type_abrev == 'XD':
-        dados_compilados[PROGRAMA5S] = np.where(dados_compilados['Programa 5S_x'] > 1, dados_compilados['Programa 5S_y'], dados_compilados['Programa 5S_x'] * dados_compilados['Programa 5S_y'])
-    if type_abrev == 'Ag': 
-                dados_compilados[SLA] = np.where(dados_compilados['SLA_x'] > 1, dados_compilados['SLA_y'], dados_compilados['SLA_x'] * dados_compilados['SLA_y'])        
+    bsc_comparativo = bsc.pivot_table(columns=[ROUTING_CODE,MES], aggfunc='median')
+    bsc_comparativo.fillna("", inplace=True)
 
-    if type_abrev == 'Ag':
-        dados_compilados = dados_compilados[[ROUTING_CODE, 'Mês', OPAV, PRODMEDIA, INVENTARIO, ABS, TREINAMENTO, AUDITORIA, AUTOAVALIACAO, CUSTO, LR, SLA, O2HE, O11INTER]]
-    if type_abrev == 'XD':
-        dados_compilados = dados_compilados[[ROUTING_CODE, 'Mês', OPAV, PRODMEDIA, INVENTARIO, ABS, TREINAMENTO, AUDITORIA, AUTOAVALIACAO, CUSTO, LR, O2HE, O11INTER, PROGRAMA5S]]   
+    pesos_pivotado = pesos.pivot_table(columns=MES, aggfunc='median')
+    bsc_comparativo['Peso'] = bsc_comparativo.index.map(pesos_pivotado.iloc[:, 0]) * 100
 
-    dados_compilados = dados_compilados.pivot_table(columns=[ROUTING_CODE, 'Mês'], aggfunc='median')
+    totals = bsc_comparativo.sum()
+    bsc_comparativo.loc['Atingimento Total'] = totals
+    bsc_comparativo.iloc[:, :-1] = bsc_comparativo.iloc[:, :-1].applymap(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and not np.isnan(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (float, int)) and not np.isnan(x) else x)
+    bsc_comparativo['Peso'] = bsc_comparativo['Peso'].apply(lambda x: f'{x:.0f}' if np.isfinite(x) and x == int(x) else f'{x:.2f}' if np.isfinite(x) else '')
 
-    pesos_pivot.set_index('index', inplace=True)
+    bsc_comparativo = Ajustes_tabelas.reorder_dataframe(bsc_comparativo, order)
+    resultados_comparativo = Ajustes_tabelas.reorder_dataframe(resultados_comparativo, order)
 
-    dados_compilados['Peso'] = dados_compilados.index.map(pesos_pivot.iloc[:, 0])
+    bsc_comparativo_styled = bsc_comparativo.style.apply(color_achievement, type='Peso', axis=1)
 
-    totals = dados_compilados.sum()
-    dados_compilados.loc['Atingimento Total'] = totals
-
-    dados_compilados.iloc[:, :-1] = dados_compilados.iloc[:, :-1].applymap(lambda x: f'{x:.0f}%' if np.isfinite(x) and x == int(x) else f'{x:.2f}%' if np.isfinite(x) else '')
-    dados_compilados['Peso'] = dados_compilados['Peso'].apply(lambda x: f'{x:.0f}' if np.isfinite(x) and x == int(x) else f'{x:.2f}' if np.isfinite(x) else '')
-
-    dados_compilados = dados_compilados.fillna('')
-
-    teste = dados_compilados.copy()
-
-    if type_abrev == 'XD':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, PROGRAMA5S, OPAV, INVENTARIO, PRODMEDIA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento Total'] 
-    if type_abrev == 'Ag':
-        order = [ABS, O2HE, O11INTER, TREINAMENTO, OPAV, INVENTARIO, PRODMEDIA, SLA, LR, CUSTO, AUTOAVALIACAO, AUDITORIA, 'Atingimento Total']
-
-    dados_compilados = dados_compilados.reindex(order)    
-
-    dados_compilados_styled = dados_compilados.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
-
-    detalhamento = detalhamento.pivot_table(columns=[ROUTING_CODE,'Mês'], aggfunc='median')
-
-    if type_abrev == 'XD':
+    resultados_comparativo.fillna("", inplace=True)
+    if type == 'XD':
         row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, TREINAMENTO, PROGRAMA5S]
         row_labels = [PROGRAMA5S,O2HE,O11INTER,PRODMEDIA]
 
-    if type_abrev == 'Ag':
+    if type == 'Ag':
         row_labels_percent = [OPAV, ABS,AUDITORIA,AUTOAVALIACAO, INVENTARIO, TREINAMENTO, SLA]
         row_labels = [O2HE,O11INTER,PRODMEDIA]
 
-    row_labels_finance = [CUSTO, LR]
+    row_labels_finance = [LR, CUSTO]
 
-    detalhamento = FormatoNumeros.format_rows(detalhamento, row_labels_percent, FormatoNumeros.format_func_percent)
-    detalhamento = FormatoNumeros.format_rows(detalhamento, row_labels, FormatoNumeros.format_func)
-    detalhamento = FormatoNumeros.format_rows(detalhamento, row_labels_finance, FormatoNumeros.format_func_finance, key='detalhamento')
+    resultados_comparativo = FormatoNumeros.format_rows(resultados_comparativo, row_labels_percent, FormatoNumeros.format_func_percent)
+    resultados_comparativo = FormatoNumeros.format_rows(resultados_comparativo, row_labels, FormatoNumeros.format_func)
+    resultados_comparativo = FormatoNumeros.format_rows(resultados_comparativo, row_labels_finance, FormatoNumeros.format_func_finance)
 
-    detalhamento = detalhamento.fillna('')
-
-    comparativo_pesos_transformado = teste.transpose()
-    comparativo_pesos_transformado.reset_index(inplace=True)
-    detalhamento_comparativo.drop(columns='Peso', inplace=True)
-    detalhamento_comparativo.drop(columns='Meta', inplace=True)
-    detalhamento_comparativo_transformado = detalhamento.transpose()
-    detalhamento_comparativo_transformado.reset_index(inplace=True)
-
-    last_complete_month = comparativo_pesos_transformado['Mês'].max()
-    comparativo_pesos_transformado = comparativo_pesos_transformado[comparativo_pesos_transformado['Mês'] == last_complete_month]
-    detalhamento_comparativo_transformado = detalhamento_comparativo_transformado[detalhamento_comparativo_transformado['Mês'] == last_complete_month]
-
-    comparativo_pesos_transformado['Atingimento Total'] = comparativo_pesos_transformado['Atingimento Total'].str.replace('%', '').astype(float)
-
-    comparativo_pesos_html = Dataframes.generate_html(dados_compilados_styled)
+    bsc_comparativo_styled = Dataframes.generate_html(bsc_comparativo_styled)
+    resultados_comparativo = Dataframes.generate_html(resultados_comparativo)
     st.subheader('Atingimeto com pesos')
-    st.write(comparativo_pesos_html, unsafe_allow_html=True)
-    dados_compilados = dados_compilados.to_csv().encode('utf-8')
-    st.download_button(label='Download', data= dados_compilados, file_name='Resultados_BSC.csv', key=(key + 'download'), mime='csv')
+    st.write(bsc_comparativo_styled, unsafe_allow_html=True)
     st.divider()
-    st.subheader('Detalhamento dos resultados')
-    detalhamento_comparativo_html = Dataframes.generate_html(detalhamento)
-    st.write(detalhamento_comparativo_html, unsafe_allow_html=True)
-    detalhamento_comparativo = detalhamento_comparativo.to_csv().encode('utf-8')
-    st.download_button(label='Download', data= detalhamento_comparativo, file_name='Detalhamento_BSC.csv', key=(key + 'download2'), mime='csv')
-    st.divider()
+    st.subheader('Detalhamento do resultado')
+    st.write(resultados_comparativo, unsafe_allow_html=True)
 
-    st.write('Gráfico referente ao último mês completo')
 
-    comparativo_pesos_transformado = comparativo_pesos_transformado.sort_values(by='Atingimento Total', ascending=False)
-    fig = px.line(comparativo_pesos_transformado, x=ROUTING_CODE, y='Atingimento Total', title='Atingimento Total', labels={'index': ROUTING_CODE, 'Atingimento Total': 'Atingimento Total'}, range_y=[0,100])
-    fig.update_traces(mode='markers+lines')
-    st.plotly_chart(fig)
+
 

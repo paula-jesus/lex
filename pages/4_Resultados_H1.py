@@ -1,6 +1,6 @@
 import streamlit as st
 from estilizador import Page_config
-from resultados_h1 import comparativo_h1
+from resultados_h1 import tabelas_resultados_h1
 import time
 from consts import *
 
@@ -13,19 +13,17 @@ loading_message.progress(0, text=text)
 
 st.header("Resultado H1")
 
-st.info("Esse link será desativado em breve. Acesse o novo [link oficial](https://lex.data.loggi.com/) (você precisará logar na sua conta Loggi para acessar).")
-
 loading_message.progress(30, text=text)
 
 tab1, tab2 = st.tabs(["Agências","XDs"])
 
 with tab1:
     
-    comparativo_h1('Ag')
+    tabelas_resultados_h1('Ag', 'ag_h1')
 
 with tab2:
 
-    comparativo_h1('XD')
+    tabelas_resultados_h1('XD', 'xd_h1')
 
 loading_message.progress(100, text=text)
 time.sleep(1)

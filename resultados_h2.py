@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
-from utils import PesoAtingimento, Ajustes_tabelas, CalcularPesos
+from utils import color_achievement
+from init_dataframes import Ajustes_tabelas, Gerar_mergear_tabelas, CalcularPesos
 from consts import *
 import streamlit as st
 import numpy as np
 
 def create_tables(type, visao=None, key=None):
 
-    resultados, pesos, metas = Ajustes_tabelas.ajustes_iniciais(type)
+
+    resultados, pesos, metas = Gerar_mergear_tabelas.dfs_mergeados(type)
 
     if visao != 'comparativo':
         routing_code = st.sidebar.multiselect('Selecione o routing code', resultados[ROUTING_CODE].unique(), key=key)
@@ -22,6 +24,21 @@ def create_tables(type, visao=None, key=None):
         if routing_code:
             resultados = resultados[resultados[ROUTING_CODE].isin(routing_code)]
 
+    rename_dict = {
+    'Participação em Treinamentos [Loggers]': 'Treinamentos Logger',
+    'Participação em Treinamentos [Líderes]': 'Treinamentos Líderes',
+    'Aprovação em Treinamentos [Loggers]': 'Aprovação Loggers',
+    'Aprovação em Treinamentos [Líderes]': 'Aprovação Lideres',
+    'Cumprimento das Rotinas da Qualidade': 'Rotinas de Qualidade',
+    'Conformidade [Inspeções da Qualidade]': 'Inspeção de Qualidade',
+    'Atingimento da Auditoria Oficial': 'Auditoria',
+    'Programa 5S  [XD]': 'Programa 5S'
+    }
+
+    dataframes = [resultados, metas, pesos]
+    for df in dataframes:
+        df.rename(columns=rename_dict, inplace=True)
+
     resultados['KPI'] = resultados[MES]
     resultados_geral = resultados.pivot_table(columns='KPI', aggfunc='median')
     resultados_comparativo = resultados.pivot_table(columns=[ROUTING_CODE,MES], aggfunc='median')
@@ -34,7 +51,7 @@ def create_tables(type, visao=None, key=None):
     resultados_com_peso_meta = pd.merge(resultados_com_peso_meta, pesos_nomeado, on=[ROUTING_CODE, MES], how='left')
 
     if type == 'XD':
-        columns = [SLA,PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'Programa 5S  [XD]', CONFORMIDADE]
+        columns = [SLA,PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, PROGRAMA5S, CONFORMIDADE]
     if type == 'Ag':
         columns = [SLA,PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'IQR Carro', 'IQR Moto']
     CalcularPesos.calculate_columns(resultados_com_peso_meta, columns)
@@ -43,7 +60,7 @@ def create_tables(type, visao=None, key=None):
     CalcularPesos.calculate_columns_baixo_melhor(resultados_com_peso_meta, columns)
 
     if type == 'XD':
-        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'Programa 5S  [XD]', CONFORMIDADE]]
+        bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, PROGRAMA5S, CONFORMIDADE]]
     if type == 'Ag':
         bsc = resultados_com_peso_meta[[ROUTING_CODE, MES, SLA, ABS, OPAV, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, CUMPR_ROT_QUALIDADE, ATING_AUDITORIA, 'IQR Carro', 'IQR Moto']]
 
@@ -68,20 +85,15 @@ def create_tables(type, visao=None, key=None):
     bsc_comparativo.iloc[:, :-1] = bsc_comparativo.iloc[:, :-1].applymap(lambda x: f'{x:.0f}%' if isinstance(x, (int, float)) and not np.isnan(x) and x == int(x) else f'{x:.2f}%' if isinstance(x, (float, int)) and not np.isnan(x) else x)
     bsc_comparativo['Peso'] = bsc_comparativo['Peso'].apply(lambda x: f'{x:.0f}' if np.isfinite(x) and x == int(x) else f'{x:.2f}' if np.isfinite(x) else '')
 
-    def reorder_dataframe(df, order):
-        new_order = [item for item in order if item in df.index]
-        df = df.reindex(new_order)
-        return df
+    order = [ABS, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, PROGRAMA5S, CUMPR_ROT_QUALIDADE, CONFORMIDADE, SLA, OPAV, ATING_AUDITORIA, 'Atingimento Total']
 
-    order = [ABS, PART_TREN_LOGGERS, PART_TREN_LIDERES, APROV_TREN_LOGGERS, APROV_TREN_LIDERES, 'Programa 5S  [XD]', CUMPR_ROT_QUALIDADE, CONFORMIDADE, SLA, OPAV, ATING_AUDITORIA, 'Atingimento Total']
+    bsc_geral = Ajustes_tabelas.reorder_dataframe(bsc_geral, order)
+    bsc_comparativo = Ajustes_tabelas.reorder_dataframe(bsc_comparativo, order)
+    resultados_geral = Ajustes_tabelas.reorder_dataframe(resultados_geral, order)
+    resultados_comparativo = Ajustes_tabelas.reorder_dataframe(resultados_comparativo, order)
 
-    bsc_geral = reorder_dataframe(bsc_geral, order)
-    bsc_comparativo = reorder_dataframe(bsc_comparativo, order)
-    resultados_geral = reorder_dataframe(resultados_geral, order)
-    resultados_comparativo = reorder_dataframe(resultados_comparativo, order)
-
-    bsc_geral_styled = bsc_geral.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
-    bsc_comparativo_styled = bsc_comparativo.style.apply(PesoAtingimento.color_achievement, type='Peso', axis=1)
+    bsc_geral_styled = bsc_geral.style.apply(color_achievement, type='Peso', axis=1)
+    bsc_comparativo_styled = bsc_comparativo.style.apply(color_achievement, type='Peso', axis=1)
 
     metas_pivotado = metas.pivot_table(columns=MES, aggfunc='median')
     resultados_geral['Meta'] = resultados_geral.index.map(metas_pivotado.iloc[:, 0])

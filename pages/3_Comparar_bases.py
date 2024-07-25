@@ -2,7 +2,7 @@ import streamlit as st
 from estilizador import Page_config, Dataframes
 import time
 from consts import *
-from create_dataframes_h2 import create_tables
+from resultados_h2 import create_tables
 import plotly.express as px
 
 estilizador = Page_config()
