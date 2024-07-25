@@ -3,12 +3,10 @@ import streamlit as st
 import numpy as np
 
 from leitor import DataReader
-from functools import reduce
 
 import pandas as pd
 import gspread
 import warnings
-
 
 warnings.filterwarnings('ignore')
 
@@ -73,85 +71,86 @@ class GerarTabelas:
 
         return df
     
-class Ajustes_tabelas:
-    def rename_columns_before_merge(df, suffix, exclude_cols=[]):
-        df_copy = df.copy()
-        df_copy.columns = [f"{col} {suffix}" if col not in exclude_cols else col for col in df_copy.columns]
-        return df_copy
+# class Ajustes_tabelas:
+#     def rename_columns_before_merge(df, suffix, exclude_cols=[]):
+#         df_copy = df.copy()
+#         df_copy.columns = [f"{col} {suffix}" if col not in exclude_cols else col for col in df_copy.columns]
+#         return df_copy
 
-    def convert_month(dfs):
-        for df in dfs:
-            df['month'] = pd.to_datetime(df['month']).dt.to_period('M')
-        return dfs
+#     def convert_month(dfs):
+#         for df in dfs:
+#             df['month'] = pd.to_datetime(df['month']).dt.to_period('M')
+#         return dfs
 
-    def change_na(dfs):
-        for df in dfs:
-            df.replace("N/A", "", inplace=True)
-        return dfs
+#     def change_na(dfs):
+#         for df in dfs:
+#             df.replace("N/A", "", inplace=True)
+#         return dfs
 
-    def config_columns_numeric(dfs):
-        for df in dfs:
-            colunas = ['% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Conformidade [Inspeções da Qualidade]', '% Atingimento da Auditoria Oficial', '% Programa 5S  [XD]', 'IQR Moto', 'IQR Carro']
-            for coluna in colunas:
-                if coluna in df.columns:
-                    df[coluna] = pd.to_numeric(df[coluna], errors='coerce')
+#     def config_columns_numeric(dfs):
+#         for df in dfs:
+#             colunas = ['% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Conformidade [Inspeções da Qualidade]', '% Atingimento da Auditoria Oficial', '% Programa 5S  [XD]', 'IQR Moto', 'IQR Carro']
+#             for coluna in colunas:
+#                 if coluna in df.columns:
+#                     df[coluna] = pd.to_numeric(df[coluna], errors='coerce')
 
-    def gerar_tabelas():
-        tabela = GerarTabelas()
-        filenames = ["opav", "abs", "sla", "iqr"]
-        dfs = [tabela.gerar_dados(filename) for filename in filenames]
-        dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer', validate="many_to_many"), dfs)
+#     def gerar_tabelas(self):
+#         tabela = GerarTabelas()
+#         filenames = ["opav", "abs", "sla", "iqr"]
+#         dfs = [tabela.gerar_dados(filename) for filename in filenames]
+#         dados_looker = reduce(lambda left,right: pd.merge(left,right,on=['routing_code', 'month'], how='outer', validate="many_to_many"), dfs)
 
-        sheet_names = ['fonte_oficial_h2', 'peso_kpis_h2_2024', 'fonte_metas_h2_2024']
-        dados_planilha, pesos, metas = [GerarTabelas.gerar_tabela_sheets(name) for name in sheet_names]
+#         sheet_names = ['fonte_oficial_h2', 'peso_kpis_h2_2024', 'fonte_metas_h2_2024']
+#         dados_planilha, pesos, metas = [GerarTabelas.gerar_tabela_sheets(name) for name in sheet_names]
 
-        return dados_looker, dados_planilha, pesos, metas
+#         return dados_looker, dados_planilha, pesos, metas
 
-    def ajustes_iniciais(type):
-        dados_looker, dados_planilha, pesos, metas = Ajustes_tabelas.gerar_tabelas()
-        dados_looker['routing_code'] = dados_looker['routing_code'].replace('CJ2', 'XDCJ2')
-        dados_looker = dados_looker.rename(columns={'sla': 'SLA', 'abs': '% Absenteísmo', 'opav': 'OPAV', 'iqr_moto': 'IQR Moto', 'iqr_carro': 'IQR Carro'})
-        Ajustes_tabelas.convert_month([dados_looker, dados_planilha, pesos, metas])
-        Ajustes_tabelas.change_na([dados_looker, dados_planilha, pesos, metas])
-        Ajustes_tabelas.config_columns_numeric([dados_looker, dados_planilha, pesos, metas])
-        dados_planilha = dados_planilha.drop('#', axis=1)
+#     def ajustes_iniciais(type):
+#         ajustes_tabelas = Ajustes_tabelas()
+#         dados_looker, dados_planilha, pesos, metas = ajustes_tabelas.gerar_tabelas()
+#         dados_looker['routing_code'] = dados_looker['routing_code'].replace('CJ2', 'XDCJ2')
+#         dados_looker = dados_looker.rename(columns={'sla': 'SLA', 'abs': '% Absenteísmo', 'opav': 'OPAV', 'iqr_moto': 'IQR Moto', 'iqr_carro': 'IQR Carro'})
+#         Ajustes_tabelas.convert_month([dados_looker, dados_planilha, pesos, metas])
+#         Ajustes_tabelas.change_na([dados_looker, dados_planilha, pesos, metas])
+#         Ajustes_tabelas.config_columns_numeric([dados_looker, dados_planilha, pesos, metas])
+#         dados_planilha = dados_planilha.drop('#', axis=1)
 
-        dados_planilha = dados_planilha[dados_planilha['BASE'] == type]
-        metas = metas[metas['BASE'] == type]
-        pesos = pesos[pesos['BASE'] == type]
+#         dados_planilha = dados_planilha[dados_planilha['BASE'] == type]
+#         metas = metas[metas['BASE'] == type]
+#         pesos = pesos[pesos['BASE'] == type]
 
-        if type == 'XD':
-            dados_looker = dados_looker[['routing_code', 'month', 'SLA', '% Absenteísmo', 'OPAV']]
-        if type == 'Ag':
-            dados_planilha = dados_planilha[['routing_code', 'month', '% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Atingimento da Auditoria Oficial']]
+#         if type == 'XD':
+#             dados_looker = dados_looker[['routing_code', 'month', 'SLA', '% Absenteísmo', 'OPAV']]
+#         if type == 'Ag':
+#             dados_planilha = dados_planilha[['routing_code', 'month', '% Participação em Treinamentos [Loggers]', '% Participação em Treinamentos [Líderes]', '% Aprovação em Treinamentos [Loggers]', '% Aprovação em Treinamentos [Líderes]', '% Cumprimento das Rotinas da Qualidade', '% Atingimento da Auditoria Oficial']]
 
-        resultados = pd.merge(dados_planilha, dados_looker, on=['routing_code', 'month'], how='left')
-        resultados.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
-        metas.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
-        pesos.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
-        resultados.columns = resultados.columns.str.replace('% ', '')
-        metas.columns = metas.columns.str.replace('% ', '')
-        pesos.columns = pesos.columns.str.replace('% ', '')
+#         resultados = pd.merge(dados_planilha, dados_looker, on=['routing_code', 'month'], how='left')
+#         resultados.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+#         metas.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+#         pesos.rename(columns={'month': 'Mês', 'routing_code': 'Routing Code'}, inplace=True)
+#         resultados.columns = resultados.columns.str.replace('% ', '')
+#         metas.columns = metas.columns.str.replace('% ', '')
+#         pesos.columns = pesos.columns.str.replace('% ', '')
 
-        return resultados, pesos, metas
+#         return resultados, pesos, metas
     
-class CalcularPesos:    
+# class CalcularPesos:    
 
-    def calculate_columns(resultados_com_peso_meta, columns):
-        for column in columns:
-            resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
-            resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
-            resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
-            resultados_com_peso_meta[f'{column}'] = np.minimum(resultados_com_peso_meta[f'{column} peso'], (resultados_com_peso_meta[f'{column} resultado'] / resultados_com_peso_meta[f'{column} meta']) * resultados_com_peso_meta[f'{column} peso'])
+#     def calculate_columns(resultados_com_peso_meta, columns):
+#         for column in columns:
+#             resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
+#             resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
+#             resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
+#             resultados_com_peso_meta[f'{column}'] = np.minimum(resultados_com_peso_meta[f'{column} peso'], (resultados_com_peso_meta[f'{column} resultado'] / resultados_com_peso_meta[f'{column} meta']) * resultados_com_peso_meta[f'{column} peso'])
 
-    def calculate_columns_baixo_melhor(resultados_com_peso_meta, columns):
-        for column in columns:
-            resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
-            resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
-            resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
-            condition = (resultados_com_peso_meta[f'{column} resultado'] > resultados_com_peso_meta[f'{column} meta']) & (resultados_com_peso_meta[f'{column} resultado'].notna()) & (resultados_com_peso_meta[f'{column} meta'].notna())
-            resultados_com_peso_meta.loc[condition, f'{column}'] = 0
-            resultados_com_peso_meta.loc[~condition & resultados_com_peso_meta[f'{column} resultado'].notna() & resultados_com_peso_meta[f'{column} meta'].notna(), f'{column}'] = resultados_com_peso_meta[f'{column} peso']
+#     def calculate_columns_baixo_melhor(resultados_com_peso_meta, columns):
+#         for column in columns:
+#             resultados_com_peso_meta[f'{column} peso'] = resultados_com_peso_meta[f'{column} peso'].astype(float) * 100
+#             resultados_com_peso_meta[f'{column} resultado'] = resultados_com_peso_meta[f'{column} resultado'].astype(float)
+#             resultados_com_peso_meta[f'{column} meta'] = resultados_com_peso_meta[f'{column} meta'].astype(float)
+#             condition = (resultados_com_peso_meta[f'{column} resultado'] > resultados_com_peso_meta[f'{column} meta']) & (resultados_com_peso_meta[f'{column} resultado'].notna()) & (resultados_com_peso_meta[f'{column} meta'].notna())
+#             resultados_com_peso_meta.loc[condition, f'{column}'] = 0
+#             resultados_com_peso_meta.loc[~condition & resultados_com_peso_meta[f'{column} resultado'].notna() & resultados_com_peso_meta[f'{column} meta'].notna(), f'{column}'] = resultados_com_peso_meta[f'{column} peso']
 
 
 
@@ -225,51 +224,8 @@ class FormatoNumeros:
                 df[column] = pd.to_numeric(df[column], errors='coerce')
         return df
     
-class PesoAtingimento:
-    @staticmethod
-    def atingimento_com_peso(row, row_names):
-        """
-        Calculates the weighted achievement for a row in the DataFrame.
-
-        Args:
-            row (Series): The row to process.
-            row_names (list): The names of the rows to process.
-
-        Returns:
-            Series: The processed row.
-        """
-        meta = row['Meta']
-        peso = row['Peso']
-        row_name = row.name
-        if row_name in row_names:
-            return pd.Series([peso if isinstance(val, (int, float)) and val <= meta else 0 if isinstance(val, (int, float)) else None for val in row.iloc[:-2]] + list(row.iloc[-2:]), index=row.index)
-        else:
-            return pd.Series([peso if isinstance(val, (int, float)) and val >= meta else (val / meta) * peso if isinstance(val, (int, float)) else None for val in row.iloc[:-2]] + list(row.iloc[-2:]), index=row.index)
-
-    @staticmethod
-    def process(df, row_names):
-        """
-        Processes the DataFrame and applies the weighted achievement calculation.
-
-        Args:
-            df (DataFrame): The DataFrame to process.
-            row_names (list): The names of the rows to process.
-
-        Returns:
-            DataFrame: The processed DataFrame.
-        """
-        df['Meta'] = pd.to_numeric(df['Meta'], errors='coerce')
-        df['Peso'] = pd.to_numeric(df['Peso'], errors='coerce')
-        df.dropna(subset=['Meta'], inplace=True)
-        df = df.apply(lambda row: PesoAtingimento.atingimento_com_peso(row, row_names), axis=1)
-        df = df.fillna(0)
-        totals = df.sum()
-        df.loc['Atingimento Total'] = totals
-        df = df.drop(['Meta'], axis=1)
-        df = df.applymap(lambda x: f'{x:.0f}%' if x == int(x) else f'{x:.2f}%')
-        return df
     
-    def color_achievement(row, type):
+def color_achievement(row, type):
         try:
             peso = row[type].replace('%', '')
         except (AttributeError, ValueError):

@@ -1,7 +1,4 @@
 import streamlit as st
-import pandas as pd 
-from io import BytesIO
-
 
 class PageStyler:
     def __init__(self):
@@ -188,66 +185,11 @@ class Dataframes:
         rendered_table = df.to_html()
         html = """
         <div style="display: flex; justify-content: center;">
-        <div style="max-height: 650px; overflow-y: auto;">
+        <div style="max-height: 1500px; overflow-y: auto;">
                 {}
         """.format(rendered_table)
         return html
 
-    def ajustar_pivotar(df, key=None):
-        """
-        Filters the DataFrame for the last month and pivots it.
-
-        Args:
-            df (DataFrame): The DataFrame to filter and pivot.
-
-        Returns:
-            DataFrame: The filtered and pivoted DataFrame.
-        """
-        if key != 'comparar_bases':
-            df = df[df['month'] == df['month'].max()]
-        return df.pivot_table(columns='month', aggfunc='median')
-    
-    def rename_and_move_to_end(df, df2, new_column_name):
-        """
-        Renames the last column of df2 and moves it to the end of df.
-
-        Args:
-            df (DataFrame): The DataFrame to modify.
-            df2 (DataFrame): The DataFrame whose last column to rename.
-            new_column_name (str): The new name for the column.
-
-        Returns:
-            DataFrame: The modified DataFrame.
-        """
-        old_column_name = df2.columns[-1]
-        df = df.rename(columns={old_column_name: new_column_name})
-        columns = df.columns.tolist()
-        columns.remove(new_column_name)
-        columns.append(new_column_name)
-        return df[columns]
-
-    def preprocess(df, column, value):
-        """
-        Preprocesses the DataFrame based on several conditions.
-
-        Args:
-            df (DataFrame): The DataFrame to preprocess.
-            column (str): The name of the column to filter.
-            value (str): The value to filter the column by.
-
-        Returns:
-            DataFrame: The preprocessed DataFrame.
-        """
-        mask = df[column] == value
-        df = df[mask]
-        if '#' in df.columns:
-            df = df.drop('#', axis=1)
-        if 'month' in df.columns:
-            df['month'] = pd.to_datetime(df['month']).dt.to_period('M')
-        if 'routing_code' in df.columns:
-            df['routing_code'] = df['routing_code'].replace('XDCJ2', 'CJ2')
-        df = df.replace('N/A', '')
-        return df
 
     def gerar_tabela_final(df1, df2):
         df1_html = Dataframes.generate_html(df1)

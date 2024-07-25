@@ -49,11 +49,11 @@ def create_charts(metas, resultados, type):
         col2.plotly_chart(Charts.gauge_chart(resultados, column_name, CUMPR_ROT_QUALIDADE, meta_value_decimal, 'green', 'red', 0, 100, [90, 100], [0, 90]))
 
         if type == 'XD':
-            column_name = 'Programa 5S  [XD]'
+            column_name = PROGRAMA5S
             meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)
             dados_area_chart, value = Charts.process_data(resultados, column_name)
-            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, 'Programa 5S  [XD]', f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
-            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, 'Programa 5S  [XD]', meta_value_decimal, 'green', 'red', 0, 100, [85, 100], [0, 85]))
+            col1.plotly_chart(Charts.create_area_plot(dados_area_chart, column_name, PROGRAMA5S, f"Meta: {meta_value_str}%", meta_value_decimal, meta_value_decimal))
+            col2.plotly_chart(Charts.gauge_chart(resultados, column_name, PROGRAMA5S, meta_value_decimal, 'green', 'red', 0, 100, [85, 100], [0, 85]))
 
             column_name = CONFORMIDADE
             meta_value_decimal, meta_value_percent, meta_value_str = Charts.get_meta_value(metas, column_name)

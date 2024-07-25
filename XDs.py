@@ -4,7 +4,7 @@ from trat_graficos import create_charts
 from estilizador import Dataframes, Page_config
 from consts import *
 import streamlit as st
-from create_dataframes_h2 import create_tables
+from resultados_h2 import create_tables
 
 estilizador = Page_config()
 estilizador.set_page_config()
